@@ -8,40 +8,59 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.steppet.ui.screen.auth.LoginScreen
 import com.example.steppet.ui.theme.StepPetTheme
+import com.example.steppet.viewmodel.LoginViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Enable edge-to-edge rendering
         enableEdgeToEdge()
+
         setContent {
             StepPetTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                // Obtain our LoginViewModel that holds loginSuccess & username
+                val loginViewModel: LoginViewModel = viewModel()
+
+                // Read loginSuccess as a Compose state
+                val isLoggedIn by remember { derivedStateOf { loginViewModel.loginSuccess } }
+
+                if (!isLoggedIn) {
+                    // Show Login UI until loginSuccess == true
+                    LoginScreen(
+                        onLoginSuccess = { /* no-op: LoginScreen sets loginSuccess internally */ }
                     )
+                } else {
+                    // Once logged in, show your home scaffold
+                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                        // You can show the username dynamically if you like:
+                        val user = loginViewModel.username
+                        Text(
+                            text = "Hello $user!",
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun MainActivityPreview() {
     StepPetTheme {
-        Greeting("Android")
+        // In preview, pretend we're logged out to show the LoginScreen
+        var fakeLoggedIn by remember { mutableStateOf(false) }
+        if (!fakeLoggedIn) {
+            LoginScreen(onLoginSuccess = { fakeLoggedIn = true })
+        } else {
+            Text("Hello Preview!", Modifier.fillMaxSize())
+        }
     }
 }
