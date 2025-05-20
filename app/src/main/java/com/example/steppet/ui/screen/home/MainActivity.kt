@@ -15,6 +15,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.steppet.ui.screen.auth.LoginScreen
 import com.example.steppet.ui.theme.StepPetTheme
 import com.example.steppet.viewmodel.LoginViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.steppet.ui.screen.pet.FeedPetScreen
+import com.example.steppet.viewmodel.PetViewModel
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,20 +40,28 @@ class MainActivity : ComponentActivity() {
                         onLoginSuccess = { /* no-op: LoginScreen sets loginSuccess internally */ }
                     )
                 } else {
-                    // Once logged in, show your home scaffold
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        // You can show the username dynamically if you like:
-                        val user = loginViewModel.username
-                        Text(
-                            text = "Hello $user!",
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                    setContent {
+                        StepPetTheme {
+                            // Obtain our LoginViewModel that holds loginSuccess & username
+                            val loginViewModel: LoginViewModel = viewModel()
+                            val isLoggedIn by remember { derivedStateOf { loginViewModel.loginSuccess } }
+
+                            if (!isLoggedIn) {
+                                // Show Login UI until loginSuccess == true
+                                LoginScreen(onLoginSuccess = { /* no-op */ })
+                            } else {
+                                // Once logged in, show the FeedPetScreen
+                                val petViewModel: PetViewModel = viewModel()
+                                FeedPetScreen(petViewModel)
+                            }
+                        }
                     }
+
+                }
                 }
             }
         }
     }
-}
 
 @Preview(showBackground = true)
 @Composable
