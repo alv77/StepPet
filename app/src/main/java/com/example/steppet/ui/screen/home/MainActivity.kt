@@ -18,6 +18,7 @@ import com.example.steppet.viewmodel.LoginViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.steppet.ui.screen.pet.FeedPetScreen
 import com.example.steppet.viewmodel.PetViewModel
+import com.example.steppet.viewmodel.StepTrackerViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -52,7 +53,10 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 // Once logged in, show the FeedPetScreen
                                 val petViewModel: PetViewModel = viewModel()
-                                FeedPetScreen(petViewModel)
+                                //FeedPetScreen(petViewModel)
+                                val stepTrackerViewModel: StepTrackerViewModel = viewModel()
+                                StepCountDisplay(stepTrackerViewModel)
+
                             }
                         }
                     }
