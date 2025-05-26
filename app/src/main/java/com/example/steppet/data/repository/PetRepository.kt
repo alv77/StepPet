@@ -1,37 +1,23 @@
 package com.example.steppet.data.repository
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import com.example.steppet.data.local.AppDatabase
+import com.example.steppet.data.local.PetEntity
 
-/**
- * Simple persistence for the pet’s hunger level (0–100).
- */
 class PetRepository(context: Context) {
-
-    private val masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-    private val prefs = EncryptedSharedPreferences.create(
-        "pet_prefs",
-        masterKey,
-        context,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val petDao = AppDatabase.getInstance(context).petDao()
 
     companion object {
-        private const val KEY_HUNGER = "hunger_level"
         private const val DEFAULT_HUNGER = 100
     }
 
-    /** Returns the saved hunger level (0–100). */
-    fun getHunger(): Int =
-        prefs.getInt(KEY_HUNGER, DEFAULT_HUNGER)
+    /** Returns saved hunger or default if none. */
+    suspend fun getHunger(): Int =
+        petDao.getPet()?.hungerLevel ?: DEFAULT_HUNGER
 
-    /** Saves the new hunger level (clamped 0–100). */
-    fun setHunger(level: Int) {
+    /** Inserts or updates the single PetEntity row. */
+    suspend fun setHunger(level: Int) {
         val clamped = level.coerceIn(0, 100)
-        prefs.edit()
-            .putInt(KEY_HUNGER, clamped)
-            .apply()
+        petDao.upsert(PetEntity(hungerLevel = clamped))
     }
 }

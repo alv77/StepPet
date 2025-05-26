@@ -1,46 +1,27 @@
 package com.example.steppet.data.repository
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import com.example.steppet.data.local.AppDatabase
+import com.example.steppet.data.local.UserEntity
 
-/**
- * Stores and retrieves login credentials securely using EncryptedSharedPreferences.
- */
 class LoginRepository(context: Context) {
+    private val userDao = AppDatabase.getInstance(context).userDao()
 
-    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-    private val prefs = EncryptedSharedPreferences.create(
-        "login_prefs",
-        masterKeyAlias,
-        context,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
-    companion object {
-        private const val KEY_USERNAME = "username"
-        private const val KEY_PASSWORD = "password"
+    /** Saves or updates the single UserEntity row. */
+    suspend fun saveCredentials(username: String, password: String) {
+        userDao.upsert(UserEntity(username = username, password = password))
     }
 
-    /** Saves the provided username and password. */
-    fun saveCredentials(username: String, password: String) {
-        prefs.edit()
-            .putString(KEY_USERNAME, username)
-            .putString(KEY_PASSWORD, password)
-            .apply()
+    /** Clears that row entirely (logs out). */
+    suspend fun clearCredentials() {
+        userDao.clearAll()
     }
 
-    /** Clears all stored credentials. */
-    fun clearCredentials() {
-        prefs.edit().clear().apply()
-    }
+    /** Returns the saved username, or null. */
+    suspend fun getUsername(): String? =
+        userDao.getUser()?.username
 
-    /** Retrieves the stored username, or null if none. */
-    fun getUsername(): String? =
-        prefs.getString(KEY_USERNAME, null)
-
-    /** Retrieves the stored password, or null if none. */
-    fun getPassword(): String? =
-        prefs.getString(KEY_PASSWORD, null)
+    /** Returns the saved password, or null. */
+    suspend fun getPassword(): String? =
+        userDao.getUser()?.password
 }
