@@ -8,37 +8,51 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.steppet.viewmodel.PetViewModel
+import com.example.steppet.logic.StepTrackerManager
 
 @Composable
 fun FeedPetScreen(
     petViewModel: PetViewModel = viewModel()
 ) {
-    // Hunger state (0–100)
     val hunger by remember { derivedStateOf { petViewModel.hunger } }
+    val steps by StepTrackerManager.stepsToday.collectAsState()
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(24.dp)
     ) {
-        Text("Pet Hunger", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
-
-        // Show a Material3 LinearProgressIndicator
-        LinearProgressIndicator(
-            progress = hunger / 100f,
+        // ⏫ Step count in top-right corner
+        Text(
+            text = "Steps: $steps",
+            style = MaterialTheme.typography.labelLarge,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp)
+                .align(Alignment.TopEnd)
+                .padding(top = 4.dp, end = 4.dp)
         )
-        Spacer(Modifier.height(8.dp))
-        Text("$hunger%", style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(32.dp))
 
-        Button(onClick = { petViewModel.feedPet() }) {
-            Text("Feed Pet")
+        // 🐶 Main content: pet hunger UI centered
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Text("Pet Hunger", style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.height(16.dp))
+
+            LinearProgressIndicator(
+                progress = hunger / 100f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("$hunger%", style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(32.dp))
+
+            Button(onClick = { petViewModel.feedPet() }) {
+                Text("Feed Pet")
+            }
         }
     }
 }
