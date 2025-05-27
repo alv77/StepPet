@@ -5,20 +5,35 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [UserEntity::class, PetEntity::class], version = 1, exportSchema = false)
+/**
+ * The main Room database for the StepPet app.
+ * Uses destructive migrations to wipe & rebuild whenever the schema changes.
+ */
+@Database(
+    entities = [UserEntity::class, PetEntity::class],
+    version = 2,                     // ← bump from 1 → 2
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun userDao(): UserDao
     abstract fun petDao(): PetDao
 
     companion object {
-        @Volatile private var INSTANCE: AppDatabase? = null
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
         fun getInstance(ctx: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
                     ctx.applicationContext,
                     AppDatabase::class.java,
                     "steppet.db"
-                ).build().also { INSTANCE = it }
+                )
+                    // Drop & recreate the database on any version/schema mismatch
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
             }
     }
 }

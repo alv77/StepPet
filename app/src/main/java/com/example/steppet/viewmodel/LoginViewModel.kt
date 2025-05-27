@@ -5,69 +5,91 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.*
 import com.example.steppet.data.repository.LoginRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
- * Handles user login/logout and secure credential storage via Room.
+ * ViewModel managing user registration, login, and logout,
+ * backed by a Room users table that persists all registered accounts.
  */
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = LoginRepository(application)
+    private val repo = LoginRepository(application)
 
+    /** Bound to the username text field */
     var username by mutableStateOf("")
         private set
+
+    /** Bound to the password text field */
     var password by mutableStateOf("")
         private set
+
+    /** Becomes true once login or registration succeeds */
     var loginSuccess by mutableStateOf(false)
         private set
+
+    /** Holds any error message to display under the form */
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    init {
-        // Auto-login if credentials exist
+    /** Update username as the user types */
+    fun onUsernameChange(new: String) {
+        username = new
+    }
+
+    /** Update password as the user types */
+    fun onPasswordChange(new: String) {
+        password = new
+    }
+
+    /**
+     * Attempt to register a new account.
+     * Calls onResult(true) if successful, false otherwise.
+     */
+    fun register(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val u = repository.getUsername()
-            val p = repository.getPassword()
-            if (!u.isNullOrBlank() && !p.isNullOrBlank()) {
-                withContext(Dispatchers.Main) {
-                    username = u
-                    password = p
+            if (username.isBlank() || password.isBlank()) {
+                errorMessage = "Username & password required"
+                onResult(false)
+            } else {
+                val success = repo.register(username, password)
+                if (success) {
+                    errorMessage = null
                     loginSuccess = true
+                    onResult(true)
+                } else {
+                    errorMessage = "Username already exists"
+                    onResult(false)
                 }
             }
         }
     }
 
-    fun onUsernameChange(new: String) { username = new }
-    fun onPasswordChange(new: String) { password = new }
-
+    /**
+     * Attempt to log in with the given credentials.
+     * Calls onResult(true) if a matching user exists, false otherwise.
+     */
     fun login(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            if (username.isNotBlank() && password.isNotBlank()) {
-                withContext(Dispatchers.IO) {
-                    repository.saveCredentials(username, password)
-                }
+            val success = repo.login(username, password)
+            if (success) {
                 errorMessage = null
                 loginSuccess = true
                 onResult(true)
             } else {
-                errorMessage = "Username and password must not be empty"
+                errorMessage = "Invalid credentials"
                 onResult(false)
             }
         }
     }
 
+    /**
+     * Log out the current session. Does not delete any users,
+     * so registrations remain in the database.
+     */
     fun logout() {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.clearCredentials()
-            withContext(Dispatchers.Main) {
-                loginSuccess = false
-                username = ""
-                password = ""
-                errorMessage = null
-            }
-        }
+        loginSuccess = false
+        username = ""
+        password = ""
+        errorMessage = null
     }
 }

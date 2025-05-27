@@ -4,15 +4,15 @@ import androidx.room.*
 
 @Dao
 interface UserDao {
-    /** Returns the single (or null) saved user row. */
-    @Query("SELECT * FROM users WHERE id = 0")
-    suspend fun getUser(): UserEntity?
+    /** Find a user by exact username+password. */
+    @Query("SELECT * FROM users WHERE username = :u AND password = :p LIMIT 1")
+    suspend fun findUser(u: String, p: String): UserEntity?
 
-    /** Insert or replace that one row. */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(user: UserEntity)
+    /** Insert a new user, fail if username already exists. */
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(user: UserEntity)
 
-    /** Clears the table entirely (logs out). */
-    @Query("DELETE FROM users")
-    suspend fun clearAll()
+    /** Optionally: list all users (for debugging). */
+    @Query("SELECT * FROM users")
+    suspend fun getAll(): List<UserEntity>
 }

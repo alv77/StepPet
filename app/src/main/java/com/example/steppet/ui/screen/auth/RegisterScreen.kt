@@ -12,16 +12,16 @@ import com.example.steppet.ui.screen.auth.AuthForm
 import com.example.steppet.viewmodel.LoginViewModel
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     AuthForm(
-        title = "Please log in",
-        buttonText = "Log In",
+        title = "Register new account",
+        buttonText = "Register",
         onSubmit = {
-            viewModel.login { success ->
-                if (success) onLoginSuccess()
+            viewModel.register { success ->
+                if (success) onRegisterSuccess()
             }
         },
         viewModel = viewModel
