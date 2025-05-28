@@ -1,4 +1,3 @@
-// StepTrackerManager.kt
 package com.example.steppet.logic
 
 import android.content.Context

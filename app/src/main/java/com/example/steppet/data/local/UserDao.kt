@@ -13,11 +13,11 @@ interface UserDao {
     @Query("SELECT * FROM users")
     suspend fun getAll(): List<UserEntity>
 
-    /** Aktualisiert den Nutzernamen */
+    /** Updates Username */
     @Query("UPDATE users SET username = :newName WHERE username = :oldName")
     suspend fun updateUsername(oldName: String, newName: String): Int
 
-    /** Löscht den Account */
+    /** Delete  Account */
     @Query("DELETE FROM users WHERE username = :u")
     suspend fun deleteUser(u: String): Int
 }

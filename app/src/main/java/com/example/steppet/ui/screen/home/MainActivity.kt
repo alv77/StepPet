@@ -6,7 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*                      // still need Material3
+import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.*
@@ -24,7 +24,7 @@ import com.example.steppet.viewmodel.LoginViewModel
 import com.example.steppet.viewmodel.PetViewModel
 import com.example.steppet.viewmodel.StepTrackerViewModel
 import com.example.steppet.data.local.AppDatabase
-import com.example.steppet.ui.screen.home.StepCountDisplay   // <-- import the real one
+import com.example.steppet.ui.screen.home.StepCountDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

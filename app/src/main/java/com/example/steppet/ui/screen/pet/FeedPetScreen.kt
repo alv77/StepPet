@@ -22,7 +22,7 @@ fun FeedPetScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        // ⏫ Step count in top-right corner
+        //  Step count in top-right corner
         Text(
             text = "Steps: $steps",
             style = MaterialTheme.typography.labelLarge,
@@ -31,7 +31,7 @@ fun FeedPetScreen(
                 .padding(top = 4.dp, end = 4.dp)
         )
 
-        // 🐶 Main content: pet hunger UI centered
+        //  Main content: pet hunger UI centered
         Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
