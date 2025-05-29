@@ -15,16 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.steppet.data.local.AppDatabase
 import com.example.steppet.ui.screen.auth.LoginScreen
 import com.example.steppet.ui.screen.auth.RegisterScreen
 import com.example.steppet.ui.screen.pet.FeedPetScreen
 import com.example.steppet.ui.screen.settings.SettingsScreen as RealSettingsScreen
 import com.example.steppet.ui.theme.StepPetTheme
 import com.example.steppet.viewmodel.LoginViewModel
-import com.example.steppet.viewmodel.PetViewModel
 import com.example.steppet.viewmodel.StepTrackerViewModel
-import com.example.steppet.data.local.AppDatabase
-import com.example.steppet.ui.screen.home.StepCountDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -36,8 +34,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             StepPetTheme {
+                // login- und schritt-tracker ViewModels
                 val loginVM: LoginViewModel       = viewModel()
-                val petVM: PetViewModel           = viewModel()
                 val stepsVM: StepTrackerViewModel = viewModel()
 
                 var screenState by remember { mutableStateOf(AuthScreen.Choice) }
@@ -92,11 +90,15 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxSize()
                                         .padding(innerPadding)
                                 ) {
-                                    FeedPetScreen(petVM)
+                                    // FeedPetScreen holt sich sein eigenes PetViewModel
+                                    FeedPetScreen()
+
                                     Spacer(Modifier.height(24.dp))
+
                                     StepCountDisplay(viewModel = stepsVM)
                                 }
                             }
+
                             Button(
                                 onClick = {
                                     loginVM.logout()
@@ -166,3 +168,5 @@ fun AuthChoiceScreen(
         }
     }
 }
+
+

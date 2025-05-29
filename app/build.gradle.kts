@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")               // <-- this is the correct KAPT plugin
+    kotlin("kapt")               // <-- KAPT plugin
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -17,6 +17,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Tell the Java annotation processor where to export Room schemas
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/schemas"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -41,6 +50,13 @@ android {
     }
 }
 
+kapt {
+    // And for the Kotlin KAPT processor as well:
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 dependencies {
     // Core & Compose
     implementation(libs.androidx.core.ktx)
@@ -57,7 +73,6 @@ dependencies {
     implementation(libs.lifecycle.process)
     implementation("androidx.compose.material:material-icons-extended:1.4.0")
 
-
     // Room (for local database storage)
     val room_version = "2.7.1"
     implementation("androidx.room:room-runtime:$room_version")
@@ -73,3 +88,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+

@@ -3,39 +3,61 @@ package com.example.steppet.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.compose.runtime.*
+import com.example.steppet.data.local.PetEntity
 import com.example.steppet.data.repository.PetRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Manages pet hunger state via Room.
+ * AndroidViewModel so we can get a Context for the PetRepository
+ * without needing a custom Factory in Compose.
  */
 class PetViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = PetRepository(application)
 
-    var hunger by mutableStateOf(0)
-        private set
+    /**
+     * Exposes the single Pet as StateFlow so Compose can collect it.
+     * Initial PetEntity() uses default values defined in PetEntity.
+     */
+    val pet: StateFlow<PetEntity> = repo
+        .petFlow()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            initialValue = PetEntity()
+        )
 
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            val saved = repo.getHunger()
-            hunger = saved
-        }
-    }
-
+    /** Feed the pet: reset hunger to 100 and boost health/happiness. */
     fun feedPet() {
-        hunger = 100
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             repo.setHunger(100)
+            repo.changeHealth(+10)
+            repo.changeHappiness(+10)
         }
     }
 
-    fun decreaseHunger(by: Int = 1) {
-        val new = (hunger - by).coerceAtLeast(0)
-        hunger = new
-        viewModelScope.launch(Dispatchers.IO) {
-            repo.setHunger(new)
+    /** Decrease hunger by [amount], clamped ≥ 0. */
+    fun decreaseHunger(amount: Int = 1) {
+        viewModelScope.launch {
+            repo.setHunger(pet.value.hungerLevel - amount)
+        }
+    }
+
+    /** Decrease health by [amount], clamped ≥ 0. */
+    fun decreaseHealth(amount: Int = 1) {
+        viewModelScope.launch {
+            repo.changeHealth(-amount)
+        }
+    }
+
+    /** Decrease happiness by [amount], clamped ≥ 0. */
+    fun decreaseHappiness(amount: Int = 1) {
+        viewModelScope.launch {
+            repo.changeHappiness(-amount)
         }
     }
 }
+
+

@@ -4,10 +4,23 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Single-row table holding the pet’s hunger level.
+ * Single-row table holding the pet’s status.
  */
 @Entity(tableName = "pet")
 data class PetEntity(
-    @PrimaryKey val id: Int = 0,
-    val hungerLevel: Int
+    @PrimaryKey val id: Long = 0L,
+
+    /** Display name of your pet */
+    val name: String = "Your Pet",
+
+    /** Hunger level in range 0–100 */
+    val hungerLevel: Int = 100,
+
+    /** Health level in range 0–100 */
+    val health: Int = 100,
+
+    /** Happiness level in range 0–100 */
+    val happiness: Int = 100
 )
+
+

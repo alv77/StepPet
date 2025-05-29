@@ -11,8 +11,8 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [UserEntity::class, PetEntity::class],
-    version = 2,
-    exportSchema = false
+    version = 2,                    // Schema-Version erhöht
+    exportSchema = false             // Schema in JSON exportieren
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -23,17 +23,23 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getInstance(ctx: Context): AppDatabase =
+        /**
+         * Returns the singleton instance of AppDatabase.
+         * Applies destructive migration on version mismatch.
+         */
+        fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
-                Room.databaseBuilder(
-                    ctx.applicationContext,
-                    AppDatabase::class.java,
-                    "steppet.db"
-                )
-                    // Drop & recreate the database on any version/schema mismatch
-                    .fallbackToDestructiveMigration()
-                    .build()
-                    .also { INSTANCE = it }
+                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
             }
+
+        private fun buildDatabase(context: Context) =
+            Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "step_pet_db"              // einheitlicher Name
+            )
+                .fallbackToDestructiveMigration()  // Drop & recreate on schema change
+                .build()
     }
 }
+
