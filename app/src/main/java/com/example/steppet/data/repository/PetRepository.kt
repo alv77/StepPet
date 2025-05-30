@@ -32,6 +32,13 @@ class PetRepository(context: Context) {
                 )
             }
 
+    /**
+     * Returns the current hunger level (0–100), or DEFAULT_HUNGER if none in DB.
+     * Needed for PetDecayWorker.
+     */
+    suspend fun getHunger(): Int =
+        petDao.getPetOnce(DEFAULT_ID)?.hungerLevel ?: DEFAULT_HUNGER
+
     /** Loads the pet once or returns a default PetEntity if none exists. */
     private suspend fun loadPet(): PetEntity =
         petDao.getPetOnce(DEFAULT_ID) ?: PetEntity(
@@ -84,6 +91,7 @@ class PetRepository(context: Context) {
         }
     }
 }
+
 
 
 

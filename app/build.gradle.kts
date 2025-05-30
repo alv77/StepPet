@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.lifecycle.process)
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
     implementation("androidx.compose.material:material-icons-extended:1.4.0")
 
     // Room (for local database storage)
