@@ -5,25 +5,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
 /**
- * Einfache Login‐Composable. Verwaltet vor Ort State für E-Mail/PW,
- * und ruft im Button‐Klick die Methode
- * LoginViewModel.loginWithEmail(email, password) auf.
+ * LoginScreen zeigt zwei Textfelder (E-Mail + Passwort), einen Button zum Anmelden
+ * und ggf. eine Fehlermeldung. Sobald loginWithEmail(...) aufgerufen wurde und
+ * der Callback "success = true" liefert, wird onLoginSuccess() getriggert.
  */
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     viewModel: LoginViewModel
 ) {
-    // 1) Lokaler UI‐State für E-Mail, Passwort, Fehlermeldung, Lade‐Anzeige
+    // 1) UI-Zustände: email, pass, isLoading, errorMessage
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    // 2) Wenn login erfolgreich, springen wir zu onLoginSuccess
+    LaunchedEffect(Unit) {
+        // nichts weiter zu tun – Callback passiert in Button-onClick
+    }
 
     Column(
         modifier = Modifier
@@ -32,61 +37,74 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Login", style = MaterialTheme.typography.headlineMedium)
+        Text("Log In", style = MaterialTheme.typography.headlineMedium)
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // E-Mail‐Feld
+        // E-Mail-TextField
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(text = "E-Mail") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Passwort‐Feld
+        // Passwort-TextField
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
-            singleLine = true,
+            label = { Text(text = "Passwort") },
             visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fehlermeldung anzeigen, falls vorhanden
+        // Fehlermeldung, falls vorhanden
         errorMsg?.let { msg ->
             Text(text = msg, color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Login‐Button oder Lade‐Indikator
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = {
-                    errorMsg = null
-                    isLoading = true
+        // Login-Button
+        Button(
+            onClick = {
+                errorMsg = null
+                isLoading = true
 
-                    viewModel.loginWithEmail(email.trim(), password) { success, err ->
-                        isLoading = false
-                        if (success) {
-                            onLoginSuccess()
-                        } else {
-                            errorMsg = err ?: "Unknown error"
-                        }
+                // 3) ViewModel-Aufruf: loginWithEmail(...)
+                viewModel.loginWithEmail(
+                    email.trim(),
+                    password
+                ) { success, err ->
+                    isLoading = false
+                    if (success) {
+                        onLoginSuccess()
+                    } else {
+                        errorMsg = err ?: "Unbekannter Fehler"
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Log In")
+                }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Log in")
             }
         }
     }
 }
+
 
 
 

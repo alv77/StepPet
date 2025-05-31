@@ -101,6 +101,9 @@ dependencies {
     // 3. Cloud Firestore (NoSQL-Datenbank, realtime/offline support)
     implementation("com.google.firebase:firebase-firestore-ktx")
 
+    // 4) Coroutines-Play-Services (damit .await() auf Tasks funktioniert)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.0")
+
     // (Optional) Firebase Messaging falls Push-Notifications später benötigt werden
     // implementation("com.google.firebase:firebase-messaging-ktx")
 
