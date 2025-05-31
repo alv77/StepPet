@@ -10,12 +10,18 @@ import androidx.work.WorkManager
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.worker.PetDecayWorker
 import java.util.concurrent.TimeUnit
+import com.google.firebase.auth.FirebaseAuth
+import android.util.Log
 
 class StepPetApp : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
         // explizit die Application-Variante von onCreate() aufrufen:
         super<Application>.onCreate()
+
+        // Test: Kann ich FirebaseAuth instanziieren?
+        val auth = FirebaseAuth.getInstance()
+        Log.d("FirebaseTest", "FirebaseAuth initialisiert: $auth")
 
         // Lifecycle‐Observer für StepTrackerManager
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)

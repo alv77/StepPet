@@ -2,13 +2,17 @@ package com.example.steppet.ui.screen.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
+/**
+ * Vereinfacht: In den Settings kann man
+ *   • Zurück‐Button (onBack)
+ *   • Alle Daten zurücksetzen (onResetData)
+ *   • Konto löschen (onDeleteAccount)
+ */
 @Composable
 fun SettingsScreen(
     loginVM: LoginViewModel,
@@ -16,63 +20,59 @@ fun SettingsScreen(
     onResetData: () -> Unit,
     onDeleteAccount: () -> Unit
 ) {
-    var showChangeDialog by remember { mutableStateOf(false) }
-    var newName by remember { mutableStateOf(loginVM.username) }
-
-    // Dialog for “Change Username”
-    if (showChangeDialog) {
-        AlertDialog(
-            onDismissRequest = { showChangeDialog = false },
-            title   = { Text("Change Username") },
-            text    = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("New username") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    loginVM.changeUsername(newName)
-                    showChangeDialog = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showChangeDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(24.dp)
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-        }
-        Spacer(Modifier.height(8.dp))
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(24.dp))
+        Text(text = "Settings", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(24.dp))
 
-        OutlinedButton(onClick = { showChangeDialog = true }) {
-            Text("Change Username")
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back")
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(onClick = onResetData) {
-            Text("Reset All Data")
+        Button(
+            onClick = {
+                // 1) Daten (Room) zurücksetzen
+                onResetData()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Reset all local data")
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(onClick = onDeleteAccount) {
+        Button(
+            onClick = {
+                // 2) Konto löschen und zurück zur Login‐Maske
+                loginVM.deleteAccount { success ->
+                    if (success) {
+                        onDeleteAccount()
+                    } else {
+                        // hier könntest du Toast/Fehlermeldung zeigen
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Delete Account")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                // 3) Logout
+                loginVM.logout()
+                onDeleteAccount() // → Navigiere zurück zur Choice/Start‐Maske
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Log Out")
         }
     }
 }
+

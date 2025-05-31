@@ -1,83 +1,82 @@
 package com.example.steppet.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import com.example.steppet.data.repository.LoginRepository
-import androidx.compose.runtime.*
+import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
 
-class LoginViewModel(application: Application) : AndroidViewModel(application) {
-    private val repo = LoginRepository(application)
+/**
+ * ViewModel für Firebase-basierte Authentifizierung (E-Mail/Passwort).
+ * Bietet genau diese Signatur:
+ *   • loginWithEmail(email, password, callback)
+ *   • registerWithEmail(email, password, callback)
+ *   • deleteAccount(callback)
+ *   • logout()
+ */
+class LoginViewModel : ViewModel() {
 
-    var username by mutableStateOf("")
-        private set
-    var password by mutableStateOf("")
-        private set
-    var loginSuccess by mutableStateOf(false)
-        private set
-    var errorMessage by mutableStateOf<String?>(null)
-        private set
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    fun onUsernameChange(new: String) { username = new }
-    fun onPasswordChange(new: String) { password = new }
+    /**
+     * Registriert einen neuen Benutzer per E-Mail/Passwort.
+     * onComplete(true, null) bei Erfolg, ansonsten onComplete(false, errorMessage).
+     */
+    fun registerWithEmail(
+        email: String,
+        password: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+                onComplete(true, null)
+            }
+            .addOnFailureListener { exception ->
+                onComplete(false, exception.localizedMessage)
+            }
+    }
 
-    fun register(onResult: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            if (username.isBlank() || password.isBlank()) {
-                errorMessage = "Username & password required"
-                onResult(false)
-            } else {
-                val ok = repo.register(username, password)
-                if (ok) {
-                    errorMessage = null
-                    loginSuccess = true
-                    onResult(true)
-                } else {
-                    errorMessage = "Username already exists"
-                    onResult(false)
+    /**
+     * Meldet einen Benutzer per E-Mail/Passwort an.
+     * onComplete(true, null) bei Erfolg, ansonsten onComplete(false, errorMessage).
+     */
+    fun loginWithEmail(
+        email: String,
+        password: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener {
+                onComplete(true, null)
+            }
+            .addOnFailureListener { exception ->
+                onComplete(false, exception.localizedMessage)
+            }
+    }
+
+    /**
+     * Löscht das aktuell eingeloggte Benutzerkonto.
+     * onComplete(true) bei Erfolg, sonst onComplete(false).
+     */
+    fun deleteAccount(onComplete: (Boolean) -> Unit) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.delete()
+                .addOnSuccessListener {
+                    onComplete(true)
                 }
-            }
+                .addOnFailureListener {
+                    onComplete(false)
+                }
+        } else {
+            onComplete(false)
         }
     }
 
-    fun login(onResult: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            val ok = repo.login(username, password)
-            if (ok) {
-                errorMessage = null
-                loginSuccess = true
-                onResult(true)
-            } else {
-                errorMessage = "Invalid credentials"
-                onResult(false)
-            }
-        }
-    }
-
+    /**
+     * Loggt den aktuell eingeloggten Benutzer aus.
+     */
     fun logout() {
-        username = ""
-        password = ""
-        errorMessage = null
-        loginSuccess = false
+        auth.signOut()
     }
-
-    fun changeUsername(newName: String) {
-        val old = username
-        viewModelScope.launch {
-            if (repo.changeUsername(old, newName)) {
-                username = newName
-            }
-        }
-    }
-
-    fun deleteAccount(onResult: () -> Unit) {
-        val user = username
-        viewModelScope.launch {
-            repo.deleteUser(user)
-            logout()
-            onResult()
-        }
-    }
-
 }
+
+
+

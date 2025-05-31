@@ -1,8 +1,12 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    kotlin("kapt")               // <-- KAPT plugin
+    kotlin("kapt")               // KAPT für Room
     alias(libs.plugins.kotlin.compose)
+
+    // Google Services Plugin für Firebase (muss hier angewendet werden, damit google-services.json
+    // beim Build ausgewertet wird)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -18,7 +22,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Tell the Java annotation processor where to export Room schemas
+        // Room: Schema Export-Pfad festlegen
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += mapOf(
@@ -51,14 +55,16 @@ android {
 }
 
 kapt {
-    // And for the Kotlin KAPT processor as well:
+    // Auch für KAPT: Room-Schema exportieren
     arguments {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
 }
 
 dependencies {
+    // ----------------------------
     // Core & Compose
+    // ----------------------------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.security:security-crypto:1.0.0")
@@ -74,13 +80,33 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.8.1")
     implementation("androidx.compose.material:material-icons-extended:1.4.0")
 
-    // Room (for local database storage)
+    // ----------------------------
+    // Room (lokale Datenbank)
+    // ----------------------------
     val room_version = "2.7.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
 
-    // Tests
+    // ----------------------------
+    // Firebase (Cloud-Backend)
+    // ----------------------------
+    // 1. Firebase BOM (Version stand Mai 2025, bitte ggf. updaten)
+    val firebaseBom = platform("com.google.firebase:firebase-bom:32.1.0")
+    implementation(firebaseBom)
+
+    // 2. Firebase Auth (für Login/Logout, z.B. E-Mail/Passwort oder Google-Sign-In)
+    implementation("com.google.firebase:firebase-auth-ktx")
+
+    // 3. Cloud Firestore (NoSQL-Datenbank, realtime/offline support)
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // (Optional) Firebase Messaging falls Push-Notifications später benötigt werden
+    // implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // ----------------------------
+    // Testing
+    // ----------------------------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -89,4 +115,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
 

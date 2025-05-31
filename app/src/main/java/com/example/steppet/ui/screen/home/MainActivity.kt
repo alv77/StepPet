@@ -14,40 +14,56 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.steppet.data.local.AppDatabase
 import com.example.steppet.ui.screen.auth.LoginScreen
 import com.example.steppet.ui.screen.auth.RegisterScreen
 import com.example.steppet.ui.screen.pet.FeedPetScreen
-import com.example.steppet.ui.screen.settings.SettingsScreen as RealSettingsScreen
+import com.example.steppet.ui.screen.settings.SettingsScreen
 import com.example.steppet.ui.theme.StepPetTheme
 import com.example.steppet.viewmodel.LoginViewModel
 import com.example.steppet.viewmodel.StepTrackerViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
+
+    // FirebaseAuth‐Instanz, um den eingeloggten Nutzer zu prüfen
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             StepPetTheme {
-                // login- und schritt-tracker ViewModels
-                val loginVM: LoginViewModel       = viewModel()
+                // 1) ViewModels instanziieren
+                val loginVM: LoginViewModel = viewModel()
                 val stepsVM: StepTrackerViewModel = viewModel()
 
-                var screenState by remember { mutableStateOf(AuthScreen.Choice) }
+                // 2) screenState basierend auf FirebaseAuth.currentUser
+                var screenState by remember {
+                    mutableStateOf(
+                        if (auth.currentUser != null) AuthScreen.Authenticated
+                        else AuthScreen.Choice
+                    )
+                }
 
-                LaunchedEffect(loginVM.loginSuccess) {
-                    if (loginVM.loginSuccess) {
-                        screenState = AuthScreen.Authenticated
+                // 3) Sobald sich der Auth‐Status ändert, updaten wir den State
+                LaunchedEffect(auth.currentUser) {
+                    screenState = if (auth.currentUser != null) {
+                        AuthScreen.Authenticated
+                    } else {
+                        AuthScreen.Choice
                     }
                 }
 
+                // 4) Back‐Handler nur beim Login/Register
                 BackHandler(
-                    enabled = screenState == AuthScreen.Login || screenState == AuthScreen.Register
+                    enabled = (screenState == AuthScreen.Login || screenState == AuthScreen.Register)
                 ) {
                     screenState = AuthScreen.Choice
                 }
@@ -55,31 +71,31 @@ class MainActivity : ComponentActivity() {
                 Box(Modifier.fillMaxSize()) {
                     when (screenState) {
                         AuthScreen.Choice -> AuthChoiceScreen(
-                            onLoginSelected    = { screenState = AuthScreen.Login },
+                            onLoginSelected = { screenState = AuthScreen.Login },
                             onRegisterSelected = { screenState = AuthScreen.Register }
                         )
 
                         AuthScreen.Login -> LoginScreen(
                             onLoginSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel      = loginVM
+                            viewModel = loginVM
                         )
 
                         AuthScreen.Register -> RegisterScreen(
                             onRegisterSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel         = loginVM
+                            viewModel = loginVM
                         )
 
                         AuthScreen.Authenticated -> {
                             Scaffold(
                                 topBar = {
                                     TopAppBar(
-                                        title = { Text("Hello, ${loginVM.username}") },
+                                        title = {
+                                            // Zeige kurz die E-Mail des aktuellen Users im Titel
+                                            Text(text = auth.currentUser?.email ?: "")
+                                        },
                                         actions = {
                                             IconButton(onClick = { screenState = AuthScreen.Settings }) {
-                                                Icon(
-                                                    Icons.Default.Settings,
-                                                    contentDescription = "Settings"
-                                                )
+                                                Icon(Icons.Default.Settings, contentDescription = "Settings")
                                             }
                                         }
                                     )
@@ -90,7 +106,6 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxSize()
                                         .padding(innerPadding)
                                 ) {
-                                    // FeedPetScreen holt sich sein eigenes PetViewModel
                                     FeedPetScreen()
 
                                     Spacer(Modifier.height(24.dp))
@@ -99,6 +114,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // Logout‐Button unten rechts (außerhalb des Scaffold‐Inhalts)
                             Button(
                                 onClick = {
                                     loginVM.logout()
@@ -115,21 +131,19 @@ class MainActivity : ComponentActivity() {
                         }
 
                         AuthScreen.Settings -> {
-                            RealSettingsScreen(
-                                loginVM      = loginVM,
-                                onBack       = { screenState = AuthScreen.Authenticated },
-
+                            SettingsScreen(
+                                loginVM = loginVM,
+                                onBack = { screenState = AuthScreen.Authenticated },
                                 onResetData = {
                                     lifecycleScope.launch(Dispatchers.IO) {
-                                        AppDatabase
-                                            .getInstance(this@MainActivity)
-                                            .clearAllTables()
+                                        AppDatabase.getInstance(this@MainActivity).clearAllTables()
                                     }
                                 },
-
                                 onDeleteAccount = {
-                                    loginVM.deleteAccount {
-                                        screenState = AuthScreen.Choice
+                                    loginVM.deleteAccount { success ->
+                                        if (success) {
+                                            screenState = AuthScreen.Choice
+                                        }
                                     }
                                 }
                             )
@@ -145,16 +159,19 @@ private enum class AuthScreen {
     Choice, Login, Register, Authenticated, Settings
 }
 
+/**
+ * Hilfs‐Composable für den “Choice”‐Bildschirm (Login oder Register).
+ */
 @Composable
 fun AuthChoiceScreen(
-    onLoginSelected:    () -> Unit,
+    onLoginSelected: () -> Unit,
     onRegisterSelected: () -> Unit
 ) {
     Column(
         Modifier
             .fillMaxSize()
             .padding(32.dp),
-        verticalArrangement  = Arrangement.Center,
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Welcome to StepPet!", style = MaterialTheme.typography.headlineMedium)
@@ -168,5 +185,11 @@ fun AuthChoiceScreen(
         }
     }
 }
+
+
+
+
+
+
 
 
