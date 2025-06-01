@@ -122,6 +122,7 @@ class MainActivity : ComponentActivity() {
 
                                     // StepCountDisplay: zeigt Schritte an
                                     StepCountDisplay(viewModel = stepsVM)
+
                                 }
                             }
 
@@ -208,6 +209,7 @@ fun AuthChoiceScreen(
         }
     }
 }
+
 
 
 
