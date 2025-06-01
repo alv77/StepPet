@@ -1,4 +1,3 @@
-// File: app/src/main/java/com/example/steppet/ui/screen/settings/SettingsScreen.kt
 package com.example.steppet.ui.screen.settings
 
 import android.widget.Toast

@@ -1,5 +1,7 @@
+// File: app/src/main/java/com/example/steppet/ui/screen/auth/RegisterScreen.kt
 package com.example.steppet.ui.screen.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,17 +11,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
-/**
- * RegisterScreen zeigt drei Textfelder (E-Mail, Passwort, Passwort bestätigen) und
- * einen Button, um ein neues Konto anzulegen. Stimmt "Passwort" != "Passwort bestätigen",
- * wird automatisch eine Fehlermeldung angezeigt.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     viewModel: LoginViewModel
 ) {
-    // 1) UI-Zustände: email, password, confirmPassword, isLoading, errorMsg
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -29,68 +26,119 @@ fun RegisterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Registrieren", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Registrieren",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // E-Mail-TextField
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text(text = "E-Mail") },
+            label = {
+                Text(
+                    text = "E-Mail",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Passwort-TextField
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text(text = "Passwort") },
+            label = {
+                Text(
+                    text = "Passwort",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Passwort bestätigen
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text(text = "Passwort bestätigen") },
+            label = {
+                Text(
+                    text = "Passwort bestätigen",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fehlermeldung, falls vorhanden
         errorMsg?.let { msg ->
-            Text(text = msg, color = MaterialTheme.colorScheme.error)
+            Text(
+                text = msg,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Register-Button
         Button(
             onClick = {
-                // 2) Vor dem ViewModel-Aufruf prüfen wir, ob Passwörter übereinstimmen
                 if (password != confirmPassword) {
                     errorMsg = "Passwörter stimmen nicht überein"
                     return@Button
                 }
-
                 errorMsg = null
                 isLoading = true
-
-                // 3) ViewModel-Aufruf: registerWithEmail(...)
                 viewModel.registerWithEmail(
                     email.trim(),
                     password
@@ -104,23 +152,23 @@ fun RegisterScreen(
                 }
             },
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(24.dp),
+                    modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Register")
+                Text(
+                    text = "Register",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
 }
-
-
-
-
-
-

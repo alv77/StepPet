@@ -1,5 +1,7 @@
+// File: app/src/main/java/com/example/steppet/ui/screen/auth/LoginScreen.kt
 package com.example.steppet.ui.screen.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,74 +11,101 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
-/**
- * LoginScreen zeigt zwei Textfelder (E-Mail + Passwort), einen Button zum Anmelden
- * und ggf. eine Fehlermeldung. Sobald loginWithEmail(...) aufgerufen wurde und
- * der Callback "success = true" liefert, wird onLoginSuccess() getriggert.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     viewModel: LoginViewModel
 ) {
-    // 1) UI-Zustände: email, pass, isLoading, errorMessage
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    // 2) Wenn login erfolgreich, springen wir zu onLoginSuccess
-    LaunchedEffect(Unit) {
-        // nichts weiter zu tun – Callback passiert in Button-onClick
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Log In", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Log In",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // E-Mail-TextField
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text(text = "E-Mail") },
+            label = {
+                Text(
+                    text = "E-Mail",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Passwort-TextField
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text(text = "Passwort") },
+            label = {
+                Text(
+                    text = "Passwort",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fehlermeldung, falls vorhanden
         errorMsg?.let { msg ->
-            Text(text = msg, color = MaterialTheme.colorScheme.error)
+            Text(
+                text = msg,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Login-Button
         Button(
             onClick = {
                 errorMsg = null
                 isLoading = true
-
-                // 3) ViewModel-Aufruf: loginWithEmail(...)
                 viewModel.loginWithEmail(
                     email.trim(),
                     password
@@ -90,23 +119,23 @@ fun LoginScreen(
                 }
             },
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(24.dp),
+                    modifier = Modifier.size(24.dp),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Log in")
+                Text(
+                    text = "Log in",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
 }
-
-
-
-
-
-
