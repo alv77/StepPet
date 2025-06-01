@@ -81,6 +81,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.4.0")
     implementation(libs.androidx.navigation.runtime.android)
     implementation(libs.androidx.navigation.compose.android)
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
 
     // ----------------------------
     // Room (lokale Datenbank)
