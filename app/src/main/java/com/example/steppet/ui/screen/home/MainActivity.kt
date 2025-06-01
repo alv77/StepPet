@@ -2,29 +2,20 @@ package com.example.steppet.ui.screen.home
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.example.steppet.data.local.AppDatabase
 import com.example.steppet.data.cloud.CloudRepository
+import com.example.steppet.data.local.AppDatabase
 import com.example.steppet.data.repository.PetRepository
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.ui.navigation.AppNavGraph
-import com.example.steppet.ui.screen.auth.LoginScreen
-import com.example.steppet.ui.screen.auth.RegisterScreen
-import com.example.steppet.ui.screen.pet.FeedPetScreen
-import com.example.steppet.ui.screen.settings.SettingsScreen
 import com.example.steppet.ui.theme.StepPetTheme
 import com.example.steppet.viewmodel.LoginViewModel
 import com.example.steppet.viewmodel.StepTrackerViewModel
@@ -41,7 +32,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // PetRepository für Cloud-Sync
         val petRepo = PetRepository(this)
 
         setContent {
@@ -50,14 +40,13 @@ class MainActivity : ComponentActivity() {
                 val stepsVM: StepTrackerViewModel = viewModel()
                 val navController = rememberNavController()
 
-                LaunchedEffect(Unit) {
-                    if (loginVM.isLoggedIn()) {
-                        launch(Dispatchers.IO) {
-                            PetRepository(this@MainActivity).syncPetFromCloud()
-                        }
-                        StepTrackerManager.loadStepsFromCloud {
-                            StepTrackerManager.onStepsLoaded(it)
-                        }
+                // Sync data once user is authenticated
+                if (auth.currentUser != null) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        petRepo.syncPetFromCloud()
+                    }
+                    StepTrackerManager.loadStepsFromCloud {
+                        StepTrackerManager.onStepsLoaded(it)
                     }
                 }
 
@@ -68,7 +57,6 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-
     }
 
     override fun onStart() {
@@ -79,33 +67,5 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         StepTrackerManager.stop()
-    }
-}
-
-private enum class AuthScreen {
-    Choice, Login, Register, Authenticated, Settings
-}
-
-@Composable
-fun AuthChoiceScreen(
-    onLoginSelected: () -> Unit,
-    onRegisterSelected: () -> Unit
-) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Welcome to StepPet!", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onLoginSelected, Modifier.fillMaxWidth()) {
-            Text("Log In")
-        }
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRegisterSelected, Modifier.fillMaxWidth()) {
-            Text("Register")
-        }
     }
 }

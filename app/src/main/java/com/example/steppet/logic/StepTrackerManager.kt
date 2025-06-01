@@ -105,6 +105,10 @@ object StepTrackerManager : SensorEventListener {
         }, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
+    fun resetSteps() {
+        _stepsToday.value = 0
+    }
+
 
     private fun syncAndroidStepsToCloud() {
         val auth = FirebaseAuth.getInstance()
