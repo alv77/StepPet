@@ -1,6 +1,7 @@
 package com.example.steppet
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -18,8 +19,9 @@ import java.util.concurrent.TimeUnit
 class StepPetApp : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
-        super<Application>.onCreate()
+        Log.d("StepDebug", "✅ StepTrackerManager started")
 
+        super<Application>.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
         // PetDecayWorker: alle 15 Minuten Hunger/Health/Happiness reduzieren
@@ -42,6 +44,7 @@ class StepPetApp : Application(), DefaultLifecycleObserver {
     }
 
     override fun onStop(owner: LifecycleOwner) {
+        StepTrackerManager.syncStepsToCloud() // Push steps on backgrounding
         StepTrackerManager.stop()
     }
 

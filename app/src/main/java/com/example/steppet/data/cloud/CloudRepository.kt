@@ -93,7 +93,12 @@ object CloudRepository {
      * Speichert die übergebene Schrittzahl (count) unter
      *   users/{uid}/steps/{dateString}, z.B. dateString = "2025-06-01"
      */
-    suspend fun saveStepsToCloud(uid: String, dateString: String, count: Int) {
+    suspend fun saveStepsToCloud(
+        uid: String,
+        dateString: String,
+        count: Int,
+        androidTotal: Int
+    ) {
         val docRef = firestore
             .collection("users")
             .document(uid)
@@ -101,10 +106,13 @@ object CloudRepository {
             .document(dateString)
 
         val data: Map<String, Any> = mapOf(
-            "count" to count
+            "count" to count,
+            "android_total" to androidTotal
         )
+
         docRef.set(data).await()
     }
+
 
     /**
      * Liest aus Firestore den Wert 'count' von

@@ -3,6 +3,7 @@ package com.example.steppet.worker
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.hardware.SensorManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
@@ -39,6 +40,30 @@ class DailyStepSummaryWorker(
         }
 
         showStepSummaryNotification(count)
+
+        val sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val stepCounter = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_STEP_COUNTER)
+
+        if (stepCounter != null) {
+            val listener = object : android.hardware.SensorEventListener {
+                override fun onSensorChanged(event: android.hardware.SensorEvent?) {
+                    sensorManager.unregisterListener(this)
+
+                    val totalRaw = event?.values?.get(0)?.toInt() ?: return
+
+                    val prefs = applicationContext.getSharedPreferences("step_prefs", Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putInt("baseline_steps", totalRaw)
+                        .putString("last_step_date", today)
+                        .apply()
+                }
+
+                override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+            }
+
+            sensorManager.registerListener(listener, stepCounter, android.hardware.SensorManager.SENSOR_DELAY_NORMAL)
+        }
+
         Result.success()
     }
 

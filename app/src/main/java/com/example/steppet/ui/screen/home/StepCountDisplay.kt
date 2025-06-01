@@ -26,9 +26,5 @@ fun StepCountDisplay(viewModel: StepTrackerViewModel = viewModel()) {
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        if (steps == 100) {
-            Text("Simulating steps...", style = MaterialTheme.typography.labelSmall)
-        }
     }
 }
