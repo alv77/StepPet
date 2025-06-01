@@ -1,6 +1,8 @@
+// File: app/src/main/java/com/example/steppet/ui/screen/settings/SettingsScreen.kt
 package com.example.steppet.ui.screen.settings
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,13 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
-/**
- * In den Settings kann man:
- *   • Zurück‐Button (onBack)
- *   • Alle Daten zurücksetzen (onResetData)
- *   • Nutzernamen ändern (changeUsername)
- *   • Logout (onLogout)
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     loginVM: LoginViewModel,
@@ -25,7 +21,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
 
-    // State‐Variablen für Username‐Änderung
+    // State-Variablen für Username-Änderung
     var newUsername by remember { mutableStateOf("") }
     var isChanging by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -34,19 +30,30 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(text = "Settings", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
-        // 1) Back‐Button
+        // 1) Back-Button
         Button(
             onClick = onBack,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Back")
+            Text(
+                text = "Back",
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
-        Spacer(modifier = Modifier.height(16.dp))
 
         // 2) Reset All Data
         Button(
@@ -56,30 +63,65 @@ fun SettingsScreen(
                     .makeText(context, "Local and cloud data reset.", Toast.LENGTH_SHORT)
                     .show()
             },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Reset all data")
+            Text(
+                text = "Reset all data",
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         // 3) Change Username
-        Text(text = "Change Username", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Change Username",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         OutlinedTextField(
             value = newUsername,
             onValueChange = { newUsername = it },
-            label = { Text("New Username") },
+            label = {
+                Text(
+                    text = "New Username",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                /* textColor entfernt, da es hier nicht existiert */
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                containerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            ),
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
         if (errorMsg != null) {
-            Text(text = errorMsg!!, color = MaterialTheme.colorScheme.error)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = errorMsg!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
         if (successMsg != null) {
-            Text(text = successMsg!!, color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = successMsg!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
         Button(
             onClick = {
@@ -104,6 +146,10 @@ fun SettingsScreen(
                 }
             },
             enabled = !isChanging,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isChanging) {
@@ -112,20 +158,31 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Save Username")
+                Text(
+                    text = "Save Username",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 4) Logout (nur ausloggen, Account bleibt bestehen)
+        // 4) Logout
         Button(
             onClick = {
                 loginVM.logout()
                 onLogout()
             },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Log Out")
+            Text(
+                text = "Log Out",
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }

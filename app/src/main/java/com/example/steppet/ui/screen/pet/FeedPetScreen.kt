@@ -11,39 +11,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.steppet.data.local.PetEntity
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.viewmodel.PetViewModel
 import com.google.firebase.auth.FirebaseAuth
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TopBar(onSettingsClick: () -> Unit) {
-    val user = FirebaseAuth.getInstance().currentUser
-    TopAppBar(
-        title = {
-            val displayName = user?.displayName
-            val email = user?.email
-
-            Text(
-                text = when {
-                    !displayName.isNullOrBlank() -> displayName
-                    !email.isNullOrBlank() -> email
-                    else -> "StepPet"
-                }
-            )
-        },
-        actions = {
-            IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings")
-            }
-        }
-    )
-}
-
 @Composable
 fun FeedPetScreen(
     navController: NavController,
@@ -54,18 +31,59 @@ fun FeedPetScreen(
     )
 ) {
     Scaffold(
-        topBar = { TopBar { navController.navigate("settings") } }
-    ) { padding ->
+        topBar = {
+            TopBar { navController.navigate("settings") }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { contentPadding ->
         FeedPetScreenContent(
             navController = navController,
             petViewModel = petViewModel,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(contentPadding)
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedPetScreenContent(
+private fun TopBar(onSettingsClick: () -> Unit) {
+    val user = FirebaseAuth.getInstance().currentUser
+
+    TopAppBar(
+        title = {
+            val displayName = user?.displayName
+            val email = user?.email
+
+            Text(
+                text = when {
+                    !displayName.isNullOrBlank() -> displayName
+                    !email.isNullOrBlank() -> email
+                    else -> "StepPet"
+                },
+                style = MaterialTheme.typography.titleLarge
+
+            )
+        },
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings"
+
+                )
+            }
+        },
+        //
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    )
+}
+
+@Composable
+private fun FeedPetScreenContent(
     navController: NavController,
     petViewModel: PetViewModel,
     modifier: Modifier = Modifier
@@ -79,14 +97,21 @@ fun FeedPetScreenContent(
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
-        // Top-right step counter button
+        // Top-right Schrittzähler-Button
         Button(
             onClick = { navController.navigate("step_history") },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            ),
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(4.dp)
         ) {
-            Text("Steps: $steps", style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = "Steps: $steps",
+                style = MaterialTheme.typography.labelLarge
+            )
         }
 
         Column(
@@ -94,17 +119,38 @@ fun FeedPetScreenContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Your Pet", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = "Your Pet",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
-            LabeledProgress("Hunger", pet.hungerLevel)
-            LabeledProgress("Health", pet.health)
-            LabeledProgress("Happiness", pet.happiness)
+            // Hunger
+            LabeledProgress(
+                label = "Hunger",
+                value = pet.hungerLevel,
+                progressColor = MaterialTheme.colorScheme.tertiary
+            )
+
+            // Health
+            LabeledProgress(
+                label = "Health",
+                value = pet.health,
+                progressColor = MaterialTheme.colorScheme.primary
+            )
+
+            // Happiness
+            LabeledProgress(
+                label = "Happiness",
+                value = pet.happiness,
+                progressColor = MaterialTheme.colorScheme.secondary
+            )
 
             Spacer(Modifier.height(24.dp))
 
             if (pet.health == 0 || pet.happiness == 0) {
                 Text(
-                    "Your pet is sad and has left… 😢",
+                    text = "Your pet is sad and has left… 😢",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -112,22 +158,59 @@ fun FeedPetScreenContent(
                 Button(
                     onClick = { petViewModel.feedPet() },
                     enabled = (steps >= 100),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (steps >= 100)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        contentColor = if (steps >= 100)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
                 ) {
-                    Text(if (steps >= 100) "Feed your pet" else "Needs 100 steps first")
+                    Text(
+                        text = if (steps >= 100) "Feed your pet" else "Needs 100 steps first",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Zeigt ein Label + ProgressBar + Prozentwert an.
+ * - `value` läuft 0–100.
+ * - `progressColor` bestimmt die Farbe der ProgressBar.
+ */
 @Composable
-fun LabeledProgress(label: String, value: Int) {
-    Text(label, style = MaterialTheme.typography.bodyLarge)
+private fun LabeledProgress(
+    label: String,
+    value: Int,
+    progressColor: androidx.compose.ui.graphics.Color
+) {
+    val percent = (value / 100f).coerceIn(0f, 1f)
+
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onBackground
+    )
     LinearProgressIndicator(
-        progress = { value / 100f },
+        progress = percent,
+        color = progressColor,
+        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
         modifier = Modifier
             .fillMaxWidth()
-            .height(12.dp),
+            .height(12.dp)
     )
-    Text("$value%", style = MaterialTheme.typography.bodySmall)
+    Text(
+        text = "${(percent * 100).roundToInt()}%",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground
+    )
 }

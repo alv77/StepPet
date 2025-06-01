@@ -31,7 +31,8 @@ fun StepHistoryScreen() {
     ) {
         Text(
             text = "Daily Step History",
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(32.dp))
 
@@ -105,11 +106,11 @@ fun BarChart(values: List<Int>, labels: List<String>) {
                     cornerRadius = CornerRadius(8f, 8f)
                 )
 
-                // Label below bar (centered and spaced)
+                // Label below bar
                 drawContext.canvas.nativeCanvas.drawText(
                     labels.getOrNull(index) ?: "",
                     x + barWidth / 2f,
-                    size.height + 16f, // shift label further down
+                    size.height + 16f,
                     android.graphics.Paint().apply {
                         color = labelColor.toArgb()
                         textSize = 12.sp.toPx()

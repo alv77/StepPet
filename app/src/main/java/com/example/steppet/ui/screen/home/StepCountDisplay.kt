@@ -19,7 +19,11 @@ fun StepCountDisplay(viewModel: StepTrackerViewModel = viewModel()) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Today's Steps", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = "Today's Steps",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(Modifier.height(12.dp))
         Text(
             "$steps",
