@@ -10,6 +10,8 @@ activityCompose = "1.10.1"
 composeBom = "2024.04.01"
 securityCryptoKtx = "1.0.0"
 lifecycleProcess = "2.9.0"
+navigationRuntimeAndroid = "2.9.0"
+navigationComposeAndroid = "2.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +31,8 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-security-crypto-ktx = { group = "androidx.security", name = "security-crypto-ktx", version.ref = "securityCryptoKtx" }
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycleProcess" }
 lifecycle-process = "androidx.lifecycle:lifecycle-process:2.7.0"
+androidx-navigation-runtime-android = { group = "androidx.navigation", name = "navigation-runtime-android", version.ref = "navigationRuntimeAndroid" }
+androidx-navigation-compose-android = { group = "androidx.navigation", name = "navigation-compose-android", version.ref = "navigationComposeAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

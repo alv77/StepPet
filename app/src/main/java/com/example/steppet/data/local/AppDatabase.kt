@@ -38,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
                 AppDatabase::class.java,
                 "step_pet_db"              // einheitlicher Name
             )
-                .fallbackToDestructiveMigration()  // Drop & recreate on schema change
+                .fallbackToDestructiveMigration(true) // Drop & recreate on schema change
                 .build()
     }
 }

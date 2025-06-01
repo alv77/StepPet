@@ -31,6 +31,11 @@ class LoginViewModel : ViewModel() {
             }
     }
 
+    fun isLoggedIn(): Boolean {
+        return auth.currentUser != null
+    }
+
+
     /**
      * Meldet einen Benutzer per E-Mail/Passwort an.
      * onComplete(true, null) bei Erfolg, ansonsten onComplete(false, errorMessage).

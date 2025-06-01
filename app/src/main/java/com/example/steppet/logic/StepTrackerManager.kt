@@ -74,13 +74,13 @@ object StepTrackerManager : SensorEventListener {
 
     private fun loadAndroidStepCount() {
         val stepCounterSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-        val debugMode = true
+        val debugMode = false
 
         if (stepCounterSensor == null || debugMode) {
             // Sensor not available or we're in debug mode — set baseline directly
-            totalAndroidStepsRaw = 30000
+            totalAndroidStepsRaw = 1000
             if (loadBaseline() < 0) {
-                saveBaseline(10000)
+                saveBaseline(1000)
                 Log.d("StepDebug", "FORCED fallback baseline because sensor is missing or emulator")
             }
             syncAndroidStepsToCloud()

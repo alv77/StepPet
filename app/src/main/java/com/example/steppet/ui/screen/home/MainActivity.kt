@@ -15,10 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
 import com.example.steppet.data.local.AppDatabase
 import com.example.steppet.data.cloud.CloudRepository
 import com.example.steppet.data.repository.PetRepository
 import com.example.steppet.logic.StepTrackerManager
+import com.example.steppet.ui.navigation.AppNavGraph
 import com.example.steppet.ui.screen.auth.LoginScreen
 import com.example.steppet.ui.screen.auth.RegisterScreen
 import com.example.steppet.ui.screen.pet.FeedPetScreen
@@ -46,106 +48,27 @@ class MainActivity : ComponentActivity() {
             StepPetTheme {
                 val loginVM: LoginViewModel = viewModel()
                 val stepsVM: StepTrackerViewModel = viewModel()
+                val navController = rememberNavController()
 
-                var screenState by remember {
-                    mutableStateOf(
-                        if (auth.currentUser != null) AuthScreen.Authenticated
-                        else AuthScreen.Choice
-                    )
-                }
-
-                LaunchedEffect(screenState) {
-                    if (screenState == AuthScreen.Authenticated) {
+                LaunchedEffect(Unit) {
+                    if (loginVM.isLoggedIn()) {
                         launch(Dispatchers.IO) {
-                            petRepo.syncPetFromCloud()
+                            PetRepository(this@MainActivity).syncPetFromCloud()
                         }
-                        StepTrackerManager.loadStepsFromCloud { remoteCount ->
-                            StepTrackerManager.onStepsLoaded(remoteCount)
-                        }
-                    }
-                }
-
-                BackHandler(
-                    enabled = (screenState == AuthScreen.Login || screenState == AuthScreen.Register)
-                ) {
-                    screenState = AuthScreen.Choice
-                }
-
-                Box(Modifier.fillMaxSize()) {
-                    when (screenState) {
-                        AuthScreen.Choice -> AuthChoiceScreen(
-                            onLoginSelected = { screenState = AuthScreen.Login },
-                            onRegisterSelected = { screenState = AuthScreen.Register }
-                        )
-
-                        AuthScreen.Login -> LoginScreen(
-                            onLoginSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel = loginVM
-                        )
-
-                        AuthScreen.Register -> RegisterScreen(
-                            onRegisterSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel = loginVM
-                        )
-
-                        AuthScreen.Authenticated -> {
-                            Scaffold(
-                                topBar = {
-                                    TopAppBar(
-                                        title = {
-                                            Text(
-                                                text = auth.currentUser?.displayName
-                                                    ?: auth.currentUser?.email
-                                                    ?: ""
-                                            )
-                                        },
-                                        actions = {
-                                            IconButton(onClick = { screenState = AuthScreen.Settings }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Settings,
-                                                    contentDescription = "Settings"
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            ) { innerPadding ->
-                                Column(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .padding(innerPadding)
-                                ) {
-                                    FeedPetScreen()
-                                    Spacer(Modifier.height(24.dp))
-                                    StepCountDisplay(viewModel = stepsVM)
-                                }
-                            }
-                        }
-
-                        AuthScreen.Settings -> {
-                            SettingsScreen(
-                                loginVM = loginVM,
-                                onBack = { screenState = AuthScreen.Authenticated },
-                                onResetData = {
-                                    lifecycleScope.launch(Dispatchers.IO) {
-                                        AppDatabase.getInstance(this@MainActivity).clearAllTables()
-                                        try {
-                                            CloudRepository.deletePetInCloud()
-                                        } catch (_: Exception) {}
-                                        try {
-                                            CloudRepository.deleteAllStepsInCloud()
-                                        } catch (_: Exception) {}
-                                    }
-                                },
-                                onLogout = {
-                                    screenState = AuthScreen.Choice
-                                }
-                            )
+                        StepTrackerManager.loadStepsFromCloud {
+                            StepTrackerManager.onStepsLoaded(it)
                         }
                     }
                 }
+
+                AppNavGraph(
+                    navController = navController,
+                    loginVM = loginVM,
+                    stepsVM = stepsVM
+                )
             }
         }
+
     }
 
     override fun onStart() {

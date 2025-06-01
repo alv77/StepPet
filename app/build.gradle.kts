@@ -79,6 +79,8 @@ dependencies {
     implementation(libs.lifecycle.process)
     implementation("androidx.work:work-runtime-ktx:2.8.1")
     implementation("androidx.compose.material:material-icons-extended:1.4.0")
+    implementation(libs.androidx.navigation.runtime.android)
+    implementation(libs.androidx.navigation.compose.android)
 
     // ----------------------------
     // Room (lokale Datenbank)
