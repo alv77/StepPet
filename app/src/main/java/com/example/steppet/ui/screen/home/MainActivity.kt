@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.steppet.data.local.AppDatabase
+import com.example.steppet.data.cloud.CloudRepository
 import com.example.steppet.data.repository.PetRepository
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.ui.screen.auth.LoginScreen
@@ -38,16 +39,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // PetRepository initialisieren
+        // PetRepository für Cloud-Sync
         val petRepo = PetRepository(this)
 
         setContent {
             StepPetTheme {
-                // 1) ViewModels instanziieren
-                val loginVM: LoginViewModel       = viewModel()
+                val loginVM: LoginViewModel = viewModel()
                 val stepsVM: StepTrackerViewModel = viewModel()
 
-                // 2) Initialer screenState (egal ob bereits eingeloggt oder nicht)
                 var screenState by remember {
                     mutableStateOf(
                         if (auth.currentUser != null) AuthScreen.Authenticated
@@ -55,43 +54,38 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                // 3) Sobald screenState == Authenticated, synchronisiere Pet + Steps
                 LaunchedEffect(screenState) {
                     if (screenState == AuthScreen.Authenticated) {
-                        // a) Pet aus Firestore laden und in Room schreiben
                         launch(Dispatchers.IO) {
                             petRepo.syncPetFromCloud()
                         }
-                        // b) Schritte aus Firestore laden und in StateFlow schreiben
                         StepTrackerManager.loadStepsFromCloud { remoteCount ->
                             StepTrackerManager.onStepsLoaded(remoteCount)
                         }
                     }
                 }
 
-                // 4) BackHandler nur beim Login/Register
                 BackHandler(
                     enabled = (screenState == AuthScreen.Login || screenState == AuthScreen.Register)
                 ) {
                     screenState = AuthScreen.Choice
                 }
 
-                // 5) UI-Baum
                 Box(Modifier.fillMaxSize()) {
                     when (screenState) {
                         AuthScreen.Choice -> AuthChoiceScreen(
-                            onLoginSelected    = { screenState = AuthScreen.Login },
+                            onLoginSelected = { screenState = AuthScreen.Login },
                             onRegisterSelected = { screenState = AuthScreen.Register }
                         )
 
                         AuthScreen.Login -> LoginScreen(
                             onLoginSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel      = loginVM
+                            viewModel = loginVM
                         )
 
                         AuthScreen.Register -> RegisterScreen(
                             onRegisterSuccess = { screenState = AuthScreen.Authenticated },
-                            viewModel         = loginVM
+                            viewModel = loginVM
                         )
 
                         AuthScreen.Authenticated -> {
@@ -99,12 +93,18 @@ class MainActivity : ComponentActivity() {
                                 topBar = {
                                     TopAppBar(
                                         title = {
-                                            // Zeige die E-Mail des aktuellen Users
-                                            Text(text = auth.currentUser?.email ?: "")
+                                            Text(
+                                                text = auth.currentUser?.displayName
+                                                    ?: auth.currentUser?.email
+                                                    ?: ""
+                                            )
                                         },
                                         actions = {
                                             IconButton(onClick = { screenState = AuthScreen.Settings }) {
-                                                Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                                Icon(
+                                                    imageVector = Icons.Default.Settings,
+                                                    contentDescription = "Settings"
+                                                )
                                             }
                                         }
                                     )
@@ -115,30 +115,10 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxSize()
                                         .padding(innerPadding)
                                 ) {
-                                    // FeedPetScreen: zeigt Pet-Daten an und erlaubt Füttern
                                     FeedPetScreen()
-
                                     Spacer(Modifier.height(24.dp))
-
-                                    // StepCountDisplay: zeigt Schritte an
                                     StepCountDisplay(viewModel = stepsVM)
-
                                 }
-                            }
-
-                            // Logout-Button (außerhalb des Scaffold-Inhalts, unten rechts)
-                            Button(
-                                onClick = {
-                                    loginVM.logout()
-                                    screenState = AuthScreen.Choice
-                                },
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(16.dp)
-                                    .width(120.dp)
-                                    .height(48.dp)
-                            ) {
-                                Text("Log Out")
                             }
                         }
 
@@ -149,14 +129,16 @@ class MainActivity : ComponentActivity() {
                                 onResetData = {
                                     lifecycleScope.launch(Dispatchers.IO) {
                                         AppDatabase.getInstance(this@MainActivity).clearAllTables()
+                                        try {
+                                            CloudRepository.deletePetInCloud()
+                                        } catch (_: Exception) {}
+                                        try {
+                                            CloudRepository.deleteAllStepsInCloud()
+                                        } catch (_: Exception) {}
                                     }
                                 },
-                                onDeleteAccount = {
-                                    loginVM.deleteAccount { success ->
-                                        if (success) {
-                                            screenState = AuthScreen.Choice
-                                        }
-                                    }
+                                onLogout = {
+                                    screenState = AuthScreen.Choice
                                 }
                             )
                         }
@@ -168,13 +150,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        // SensorListener (Schritte zählen) starten
         StepTrackerManager.start(this)
     }
 
     override fun onStop() {
         super.onStop()
-        // SensorListener beenden
         StepTrackerManager.stop()
     }
 }
@@ -183,19 +163,16 @@ private enum class AuthScreen {
     Choice, Login, Register, Authenticated, Settings
 }
 
-/**
- * Einfacher Composable‐Helper für die Wahl zwischen Login und Register.
- */
 @Composable
 fun AuthChoiceScreen(
-    onLoginSelected:    () -> Unit,
+    onLoginSelected: () -> Unit,
     onRegisterSelected: () -> Unit
 ) {
     Column(
         Modifier
             .fillMaxSize()
             .padding(32.dp),
-        verticalArrangement  = Arrangement.Center,
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Welcome to StepPet!", style = MaterialTheme.typography.headlineMedium)
@@ -209,15 +186,3 @@ fun AuthChoiceScreen(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

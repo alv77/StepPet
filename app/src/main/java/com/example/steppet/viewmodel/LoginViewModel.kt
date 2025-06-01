@@ -2,14 +2,12 @@ package com.example.steppet.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
 
 /**
- * ViewModel für Firebase-basierte Authentifizierung (E-Mail/Passwort).
- * Bietet genau diese Signatur:
- *   • loginWithEmail(email, password, callback)
- *   • registerWithEmail(email, password, callback)
- *   • deleteAccount(callback)
- *   • logout()
+ * ViewModel für Firebase‐basierte Authentifizierung (E-Mail/Passwort).
+ * Enthält Login, Registration, Logout und Username‐Änderung.
+ * Die Lösch‐Logik (deleteAccount) wurde komplett entfernt.
  */
 class LoginViewModel : ViewModel() {
 
@@ -52,21 +50,27 @@ class LoginViewModel : ViewModel() {
     }
 
     /**
-     * Löscht das aktuell eingeloggte Benutzerkonto.
-     * onComplete(true) bei Erfolg, sonst onComplete(false).
+     * Ändert den Nutzernamen (displayName) des aktuell eingeloggten Firebase-Users.
+     * onComplete(true, null) bei Erfolg, ansonsten onComplete(false, errorMessage).
      */
-    fun deleteAccount(onComplete: (Boolean) -> Unit) {
+    fun changeUsername(
+        newUsername: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
         val user = auth.currentUser
         if (user != null) {
-            user.delete()
+            val profileUpdates = userProfileChangeRequest {
+                displayName = newUsername
+            }
+            user.updateProfile(profileUpdates)
                 .addOnSuccessListener {
-                    onComplete(true)
+                    onComplete(true, null)
                 }
-                .addOnFailureListener {
-                    onComplete(false)
+                .addOnFailureListener { exception ->
+                    onComplete(false, exception.localizedMessage)
                 }
         } else {
-            onComplete(false)
+            onComplete(false, "No user is currently logged in")
         }
     }
 
@@ -77,6 +81,3 @@ class LoginViewModel : ViewModel() {
         auth.signOut()
     }
 }
-
-
-

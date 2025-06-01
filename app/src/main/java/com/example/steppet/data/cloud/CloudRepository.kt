@@ -11,6 +11,7 @@ import kotlinx.coroutines.tasks.await
  * Enthält:
  *  • Pet‐Zustand speichern / laden
  *  • Schrittzahl speichern / laden
+ *  • Pet‐Dokument löschen / Schritte löschen
  */
 object CloudRepository {
 
@@ -121,7 +122,40 @@ object CloudRepository {
         if (!snapshot.exists()) return null
         return snapshot.getLong("count")?.toInt()
     }
+
+    // ------------------------------------------------------------------------------------------------
+    // 3) PET‐DOKUMENT LÖSCHEN / ALLE SCHRITTE LÖSCHEN
+    // ------------------------------------------------------------------------------------------------
+
+    /**
+     * Löscht in Firestore das Dokument 'users/{uid}/petState/latest'.
+     */
+    suspend fun deletePetInCloud() {
+        val uid = currentUid() ?: return
+        firestore
+            .collection("users")
+            .document(uid)
+            .collection("petState")
+            .document("latest")
+            .delete()
+            .await()
+    }
+
+    /**
+     * Löscht alle Dokumente in 'users/{uid}/steps'.
+     * Achtung: Firestore erlaubt kein Lösch‐Bulk per Query; wir
+     * müssen einzeln alle Dokument‐IDs auslesen und dann löschen.
+     */
+    suspend fun deleteAllStepsInCloud() {
+        val uid = currentUid() ?: return
+        val stepsCollection = firestore
+            .collection("users")
+            .document(uid)
+            .collection("steps")
+
+        val snapshot = stepsCollection.get().await()
+        for (doc in snapshot.documents) {
+            stepsCollection.document(doc.id).delete().await()
+        }
+    }
 }
-
-
-

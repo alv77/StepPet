@@ -8,35 +8,33 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.steppet.logic.StepTrackerManager
+import com.example.steppet.worker.DailyStepSummaryWorker
 import com.example.steppet.worker.PetDecayWorker
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
-import com.google.firebase.auth.FirebaseAuth
-import android.util.Log
 
 class StepPetApp : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
-        // explizit die Application-Variante von onCreate() aufrufen:
         super<Application>.onCreate()
 
-        // Test: Kann ich FirebaseAuth instanziieren?
-        val auth = FirebaseAuth.getInstance()
-        Log.d("FirebaseTest", "FirebaseAuth initialisiert: $auth")
-
-        // Lifecycle‐Observer für StepTrackerManager
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
-        // WorkManager: stündliche Decay‐Arbeit planen
+        // PetDecayWorker: alle 15 Minuten Hunger/Health/Happiness reduzieren
         val decayRequest = PeriodicWorkRequestBuilder<PetDecayWorker>(
-            1, TimeUnit.HOURS
+            15, TimeUnit.MINUTES
         ).build()
-
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(
-                /* uniqueWorkName: */ "pet_decay_work",
-                /* existingWorkPolicy: */ ExistingPeriodicWorkPolicy.KEEP,
+                "pet_decay_work",
+                ExistingPeriodicWorkPolicy.KEEP,
                 decayRequest
             )
+
+        // DailyStepSummaryWorker: täglich um 23:00 Uhr eine Zusammenfassung senden
+        scheduleDailyStepSummary()
     }
 
     override fun onStart(owner: LifecycleOwner) {
@@ -46,6 +44,28 @@ class StepPetApp : Application(), DefaultLifecycleObserver {
     override fun onStop(owner: LifecycleOwner) {
         StepTrackerManager.stop()
     }
+
+    private fun scheduleDailyStepSummary() {
+        val now = LocalDateTime.now(ZoneId.systemDefault())
+        val todayAt23 = now.withHour(23).withMinute(0).withSecond(0).withNano(0)
+        val firstRun = if (now.isAfter(todayAt23)) {
+            todayAt23.plusDays(1)
+        } else {
+            todayAt23
+        }
+        val delayMillis = Duration.between(now, firstRun).toMillis()
+
+        val summaryRequest = PeriodicWorkRequestBuilder<DailyStepSummaryWorker>(
+            24, TimeUnit.HOURS
+        )
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .build()
+
+        WorkManager.getInstance(this)
+            .enqueueUniquePeriodicWork(
+                "daily_step_summary_work",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                summaryRequest
+            )
+    }
 }
-
-

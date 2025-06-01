@@ -3,9 +3,7 @@ package com.example.steppet.ui.screen.pet
 import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,8 +22,9 @@ fun FeedPetScreen(
         )
     )
 ) {
-    // pet hat jetzt garantiert einen Wert (Default PetEntity), kein Null mehr
+    // pet = aktuelles PetEntity (Default, falls null)
     val pet by petViewModel.pet.collectAsState(initial = PetEntity())
+    // steps = Schrittzahl aus StepTrackerManager
     val steps by StepTrackerManager.stepsToday.collectAsState(initial = 0)
 
     Box(
@@ -33,7 +32,7 @@ fun FeedPetScreen(
             .fillMaxSize()
             .padding(24.dp)
     ) {
-        // Step count oben rechts
+        // Schrittzähler oben rechts
         Text(
             text = "Steps: $steps",
             style = MaterialTheme.typography.labelLarge,
@@ -88,16 +87,18 @@ fun FeedPetScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             } else {
-                Button(onClick = { petViewModel.feedPet() }) {
-                    Text("Feed your pet")
+                // Feed-Button nur aktiv, wenn mind. 100 Schritte
+                Button(
+                    onClick = { petViewModel.feedPet() },
+                    enabled = (steps >= 100),
+                ) {
+                    if (steps >= 100) {
+                        Text("Feed your pet")
+                    } else {
+                        Text("Needs 100 steps first")
+                    }
                 }
             }
         }
     }
 }
-
-
-
-
-
-
