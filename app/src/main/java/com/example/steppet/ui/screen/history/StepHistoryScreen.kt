@@ -16,11 +16,28 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.steppet.data.cloud.CloudRepository
+import java.time.LocalDate
 import kotlin.math.roundToInt
+import com.example.steppet.data.model.StepStats
+import java.time.format.DateTimeFormatter
+
 
 @Composable
 fun StepHistoryScreen() {
-    val stepData = listOf(10, 20, 30, 40, 50, 60, 70)
+    var stepMap by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var stats by remember { mutableStateOf<StepStats?>(null) }
+
+    LaunchedEffect(Unit) {
+        stepMap = CloudRepository.getStepsLast7Days().toSortedMap(compareBy { LocalDate.parse(it) })
+        stats = CloudRepository.getGlobalStepStats()
+
+    }
+
+    val steps = stepMap.values.toList()
+    val labels = stepMap.keys.map {
+        LocalDate.parse(it).dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+    }
 
     Column(
         modifier = Modifier
@@ -29,19 +46,39 @@ fun StepHistoryScreen() {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Daily Step History",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        val textColor = MaterialTheme.colorScheme.onBackground
+        Text("Daily Step History", style = MaterialTheme.typography.headlineMedium, color = textColor)
+
         Spacer(Modifier.height(32.dp))
 
-        BarChart(
-            values = stepData,
-            labels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-        )
+        if (steps.isNotEmpty()) {
+            BarChart(values = steps, labels = labels)
+
+            Spacer(Modifier.height(128.dp))
+
+            stats?.let {
+                val formatter = DateTimeFormatter.ofPattern("EEE, dd MMM") // e.g. Mon, 03 Jun
+
+                val bestDay = it.bestDay?.let { LocalDate.parse(it).format(formatter) } ?: "N/A"
+                val worstDay = it.worstDay?.let { LocalDate.parse(it).format(formatter) } ?: "N/A"
+
+
+                Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+                    Text("Total steps: ${it.totalSteps}", color = textColor)
+                    Text("Average: ${it.averageSteps} steps/day", color = textColor)
+                    Text("Best: $bestDay — ${it.bestCount} steps", color = textColor)
+                    Text("Worst: $worstDay — ${it.worstCount} steps", color = textColor)
+                    Text("Current streak: ${it.currentStreak} day(s)", color = textColor)
+
+                }
+            } ?: CircularProgressIndicator()
+        } else {
+            CircularProgressIndicator()
+        }
     }
 }
+
+
 
 @Composable
 fun BarChart(values: List<Int>, labels: List<String>) {
@@ -60,6 +97,7 @@ fun BarChart(values: List<Int>, labels: List<String>) {
     ) {
         val density = LocalDensity.current
         val totalWidthPx = with(density) { maxWidth.toPx() }
+        val minBarHeightPx = with(density) { 6.dp.toPx() }
         val barWidth = totalWidthPx / (values.size * 2f)
         val barSpacing = barWidth
 
@@ -81,11 +119,12 @@ fun BarChart(values: List<Int>, labels: List<String>) {
         ) {
             values.forEachIndexed { index, value ->
                 val x = index * (barWidth + barSpacing) + barSpacing / 2f
-                val barHeight = (value / maxValue.toFloat()) * (size.height - 50f)
+                var barHeight = (value / maxValue.toFloat()) * (size.height - 50f)
+                barHeight = maxOf(barHeight, minBarHeightPx) // 🔥 ensure minimal height
                 val isSelected = index == selectedIndex
 
                 // Value above bar
-                if (isSelected) {
+                if (isSelected && value > 0) {
                     drawContext.canvas.nativeCanvas.drawText(
                         "$value",
                         x + barWidth / 2f,

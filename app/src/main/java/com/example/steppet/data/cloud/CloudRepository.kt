@@ -1,9 +1,13 @@
 package com.example.steppet.data.cloud
 
+import android.util.Log
 import com.example.steppet.data.local.PetEntity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import com.example.steppet.data.model.StepStats
 
 /**
  * Einfache Hilfsklasse für Firestore‐Operationen rund um "users/{uid}/…".
@@ -166,4 +170,80 @@ object CloudRepository {
             stepsCollection.document(doc.id).delete().await()
         }
     }
+
+    suspend fun getStepsLast7Days(): Map<String, Int> {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return emptyMap()
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val today = LocalDate.now()
+
+        val firestore = FirebaseFirestore.getInstance()
+        val result = mutableMapOf<String, Int>()
+
+        for (i in 6 downTo 0) {
+            val date = today.minusDays(i.toLong())
+            val dateString = date.format(formatter)
+
+            try {
+                val snapshot = firestore
+                    .collection("users")
+                    .document(uid)
+                    .collection("steps")
+                    .document(dateString)
+                    .get()
+                    .await()
+
+                val count = snapshot.getLong("count")?.toInt() ?: 0
+                result[dateString] = count
+
+                Log.d("StepFetch", "[$dateString] count: $count (exists=${snapshot.exists()})")
+            } catch (e: Exception) {
+                Log.e("StepFetch", "Error fetching steps for $dateString: ${e.message}")
+                result[dateString] = 0
+            }
+        }
+
+        return result
+    }
+
+    suspend fun getGlobalStepStats(): StepStats? {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return null
+        val stepsCollection = FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(uid)
+            .collection("steps")
+
+        val snapshot = stepsCollection.get().await()
+        if (snapshot.isEmpty) return null
+
+        val stepsMap = snapshot.documents
+            .mapNotNull { doc ->
+                val count = doc.getLong("count")?.toInt() ?: return@mapNotNull null
+                val date = doc.id // format assumed to be YYYY-MM-DD
+                date to count
+            }
+            .sortedBy { it.first }  // sort by date
+            .toMap()
+
+        val values = stepsMap.values.toList()
+        val nonZero = stepsMap.filterValues { it > 0 }
+
+        val total = values.sum()
+        val average = if (values.isNotEmpty()) total / values.size else 0
+        val best = nonZero.maxByOrNull { it.value }
+        val worst = nonZero.minByOrNull { it.value }
+
+        // Calculate streak from latest to earliest
+        val streak = stepsMap.entries.reversed().takeWhile { it.value > 0 }.count()
+
+        return StepStats(
+            totalSteps = total,
+            averageSteps = average,
+            bestDay = best?.key,
+            bestCount = best?.value ?: 0,
+            worstDay = worst?.key,
+            worstCount = worst?.value ?: 0,
+            currentStreak = streak
+        )
+    }
+
 }
