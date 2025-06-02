@@ -16,18 +16,26 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
+/**
+ * Application‐Klasse, in der WorkManager‐Aufträge geplant werden.
+ *
+ * • PetDecayWorker: alle 30 Minuten ausführen → Hunger linear über 24 h reduzieren.
+ * • DailyStepSummaryWorker: täglich um 23:00 Uhr Zusammenfassung pushen.
+ *
+ * Außerdem starten wir StepTrackerManager bei App‐Start und synchronisieren beim Stoppen.
+ */
 class StepPetApp : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
-        Log.d("StepDebug", "✅ StepTrackerManager started")
-
+        Log.d("StepPetApp", "Application onCreate – registering workers")
         super<Application>.onCreate()
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
-        // PetDecayWorker: alle 15 Minuten Hunger/Health/Happiness reduzieren
+        // PetDecayWorker: alle 30 Minuten ausführen
         val decayRequest = PeriodicWorkRequestBuilder<PetDecayWorker>(
-            15, TimeUnit.MINUTES
+            30, TimeUnit.MINUTES
         ).build()
+
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(
                 "pet_decay_work",
@@ -40,14 +48,19 @@ class StepPetApp : Application(), DefaultLifecycleObserver {
     }
 
     override fun onStart(owner: LifecycleOwner) {
+        super.onStart(owner)
         StepTrackerManager.start(this)
     }
 
     override fun onStop(owner: LifecycleOwner) {
-        StepTrackerManager.syncStepsToCloud() // Push steps on backgrounding
+        super.onStop(owner)
+        StepTrackerManager.syncStepsToCloud()
         StepTrackerManager.stop()
     }
 
+    /**
+     * Plant DailyStepSummaryWorker so, dass er jeden Tag um 23:00 Uhr läuft.
+     */
     private fun scheduleDailyStepSummary() {
         val now = LocalDateTime.now(ZoneId.systemDefault())
         val todayAt23 = now.withHour(23).withMinute(0).withSecond(0).withNano(0)

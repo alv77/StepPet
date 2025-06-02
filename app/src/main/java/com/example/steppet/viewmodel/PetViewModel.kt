@@ -9,17 +9,22 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
- * AndroidViewModel so we can get a Context for the PetRepository
- * without needing a custom Factory in Compose.
+ * AndroidViewModel, damit wir einen Context für PetRepository nutzen können.
+ *
+ * • pet: StateFlow<PetEntity>, das UI abonnieren kann.
+ * • feedPet(stepsToday): Versucht, das Pet zu füttern, wenn heute noch Feeds übrig.
+ * • canFeed(stepsToday): Gibt true zurück, wenn noch ein Feed heute möglich ist.
+ * • remainingFeeds(stepsToday): Anzahl verbleibender Feeds heute.
  */
 class PetViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = PetRepository(application)
 
     /**
-     * Exposes the single Pet as StateFlow so Compose can collect it.
-     * Initial PetEntity() uses default values defined in PetEntity.
+     * Exposes das einzelne Pet als StateFlow, damit Compose es collecten kann.
      */
     val pet: StateFlow<PetEntity> = repo
         .petFlow()
@@ -29,35 +34,37 @@ class PetViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = PetEntity()
         )
 
-    /** Feed the pet: reset hunger to 100 and boost health/happiness. */
-    fun feedPet() {
+    /**
+     * Versucht, das Pet zu füttern, falls heute noch Feed‐Chancen übrig sind.
+     * Übergibt die aktuelle Schrittzahl (stepsToday) ans Repository.
+     */
+    fun feedPet(stepsToday: Int) {
         viewModelScope.launch {
-            repo.setHunger(100)
-            repo.changeHealth(+10)
-            repo.changeHappiness(+10)
+            repo.feedPetIfAllowed(stepsToday)
         }
     }
 
-    /** Decrease hunger by [amount], clamped ≥ 0. */
-    fun decreaseHunger(amount: Int = 1) {
-        viewModelScope.launch {
-            repo.setHunger(pet.value.hungerLevel - amount)
-        }
+    /**
+     * Gibt zurück, ob aktuell ein weiterer Feed heute möglich ist:
+     *   (stepsToday / 1000) > feedsDoneToday ?
+     */
+    fun canFeed(stepsToday: Int): Boolean {
+        val current = pet.value
+        val todayString = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+        // Wenn lastFeedDate != heute, zählen wir feedsDoneToday als 0
+        val feedsDone = if (current.lastFeedDate != todayString) 0 else current.feedsDoneToday
+        val maxAllowed = (stepsToday / 1000).coerceIn(0, 10)
+        return feedsDone < maxAllowed
     }
 
-    /** Decrease health by [amount], clamped ≥ 0. */
-    fun decreaseHealth(amount: Int = 1) {
-        viewModelScope.launch {
-            repo.changeHealth(-amount)
-        }
-    }
-
-    /** Decrease happiness by [amount], clamped ≥ 0. */
-    fun decreaseHappiness(amount: Int = 1) {
-        viewModelScope.launch {
-            repo.changeHappiness(-amount)
-        }
+    /**
+     * Wie viele Feeds sind heute insgesamt noch übrig? (für UI-Label)
+     */
+    fun remainingFeeds(stepsToday: Int): Int {
+        val current = pet.value
+        val todayString = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+        val feedsDone = if (current.lastFeedDate != todayString) 0 else current.feedsDoneToday
+        val maxAllowed = (stepsToday / 1000).coerceIn(0, 10)
+        return (maxAllowed - feedsDone).coerceAtLeast(0)
     }
 }
-
-

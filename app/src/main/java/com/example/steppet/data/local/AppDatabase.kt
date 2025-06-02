@@ -7,12 +7,13 @@ import androidx.room.RoomDatabase
 
 /**
  * The main Room database for the StepPet app.
- * Uses destructive migrations to wipe & rebuild whenever the schema changes.
+ * Wir haben die Version hochgesetzt, weil wir Felder in PetEntity hinzugefügt haben.
+ * Mit fallbackToDestructiveMigration(true) wird bei Versionssprung die alte DB gelöscht.
  */
 @Database(
     entities = [UserEntity::class, PetEntity::class],
-    version = 2,                    // Schema-Version erhöht
-    exportSchema = false             // Schema in JSON exportieren
+    version = 3,                    // Version von 2 auf 3 erhöht
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -25,7 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         /**
          * Returns the singleton instance of AppDatabase.
-         * Applies destructive migration on version mismatch.
+         * Mit fallbackToDestructiveMigration(true) löschen wir die DB bei Versionswechsel.
          */
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
@@ -36,10 +37,9 @@ abstract class AppDatabase : RoomDatabase() {
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
-                "step_pet_db"              // einheitlicher Name
+                "step_pet_db"
             )
-                .fallbackToDestructiveMigration(true) // Drop & recreate on schema change
+                .fallbackToDestructiveMigration(true)
                 .build()
     }
 }
-
