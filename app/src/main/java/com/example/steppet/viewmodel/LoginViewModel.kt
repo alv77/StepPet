@@ -7,7 +7,6 @@ import com.google.firebase.auth.ktx.userProfileChangeRequest
 /**
  * ViewModel für Firebase‐basierte Authentifizierung (E-Mail/Passwort).
  * Enthält Login, Registration, Logout und Username‐Änderung.
- * Die Lösch‐Logik (deleteAccount) wurde komplett entfernt.
  */
 class LoginViewModel : ViewModel() {
 

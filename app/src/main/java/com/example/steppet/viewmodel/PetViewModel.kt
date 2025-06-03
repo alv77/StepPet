@@ -13,8 +13,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * AndroidViewModel, damit wir einen Context für PetRepository nutzen können.
- *
  * • pet: StateFlow<PetEntity>, das UI abonnieren kann.
  * • feedPet(stepsToday): Versucht, das Pet zu füttern, wenn heute noch Feeds übrig.
  * • canFeed(stepsToday): Gibt true zurück, wenn noch ein Feed heute möglich ist.

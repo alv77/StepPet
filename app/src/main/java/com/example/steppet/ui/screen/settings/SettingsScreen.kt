@@ -10,6 +10,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.steppet.viewmodel.LoginViewModel
 
+/**
+ * SettingsScreen zeigt diverse Einstellungen an:
+ * 1) Zurück-Button
+ * 2) „Reset All Data“-Button
+ * 3) Change Username
+ * 4) Logout-Button
+ *
+ * @param loginVM     ViewModel, das Firebase-Auth-Funktionen (changeUsername, logout) bereitstellt
+ * @param onBack      Callback, wenn der Nutzer auf „Back“ klickt
+ * @param onResetData Callback, wenn der Nutzer „Reset all data“ wählt (löscht lokale und Cloud-Daten)
+ * @param onLogout    Callback bei Logout (führt logout() aus und navigiert zurück zum Auth-Screen)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -18,13 +30,14 @@ fun SettingsScreen(
     onResetData: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Context für Toast-Meldungen
     val context = LocalContext.current
 
-    // State-Variablen für Username-Änderung
-    var newUsername by remember { mutableStateOf("") }
-    var isChanging by remember { mutableStateOf(false) }
-    var errorMsg by remember { mutableStateOf<String?>(null) }
-    var successMsg by remember { mutableStateOf<String?>(null) }
+    // State-Variablen für das Change-Username-Formular
+    var newUsername by remember { mutableStateOf("") }            // Eingabe für neuen Nutzernamen
+    var isChanging by remember { mutableStateOf(false) }           // Flag, ob der Change-Request gerade läuft
+    var errorMsg by remember { mutableStateOf<String?>(null) }     // Fehlermeldung, falls Username leer oder update fehlgeschlagen
+    var successMsg by remember { mutableStateOf<String?>(null) }   // Erfolgsmeldung nach erfolgreichem Change
 
     Column(
         modifier = Modifier
@@ -33,15 +46,16 @@ fun SettingsScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Überschrift für den Screen
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        // 1) Back-Button
+        // 1) Back-Button: Navigiert zurück zur vorherigen Ansicht
         Button(
-            onClick = onBack,
+            onClick = onBack,                                       // ruft den übergebenen Callback auf
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -50,14 +64,15 @@ fun SettingsScreen(
         ) {
             Text(
                 text = "Back",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge           // Standard-Textstyle
             )
         }
 
-        // 2) Reset All Data
+        // 2) Reset All Data: Löscht lokale Daten (Room, SharedPrefs) und Cloud-Daten
         Button(
             onClick = {
-                onResetData()
+                onResetData()                                       // führt den Reset-Callback aus
+                // Zeigt Toast als Bestätigung an
                 Toast
                     .makeText(context, "Local and cloud data reset.", Toast.LENGTH_SHORT)
                     .show()
@@ -76,15 +91,16 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 3) Change Username
+        // 3) Change Username: Formular-Label
         Text(
             text = "Change Username",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
+        // Eingabefeld für neuen Nutzernamen
         OutlinedTextField(
             value = newUsername,
-            onValueChange = { newUsername = it },
+            onValueChange = { newUsername = it },                    // aktualisiert State bei jeder Eingabe
             label = {
                 Text(
                     text = "New Username",
@@ -97,7 +113,6 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurface
             ),
             colors = TextFieldDefaults.outlinedTextFieldColors(
-                /* textColor entfernt, da es hier nicht existiert */
                 disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 containerColor = MaterialTheme.colorScheme.surface,
                 cursorColor = MaterialTheme.colorScheme.primary,
@@ -108,6 +123,7 @@ fun SettingsScreen(
             ),
             modifier = Modifier.fillMaxWidth()
         )
+        // Anzeige einer Fehlermeldung unterhalb des Textfelds, falls errorMsg nicht null ist
         if (errorMsg != null) {
             Text(
                 text = errorMsg!!,
@@ -115,6 +131,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.error
             )
         }
+        // Erfolgsmeldung, falls der Username erfolgreich geändert wurde
         if (successMsg != null) {
             Text(
                 text = successMsg!!,
@@ -122,18 +139,24 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+        // Button, um die neue Username-Änderung zu speichern
         Button(
             onClick = {
+                // Validierung: Feld darf nicht leer sein
                 if (newUsername.isBlank()) {
                     errorMsg = "Username cannot be empty"
                     successMsg = null
                     return@Button
                 }
+                // Reset von Fehlermeldung und Erfolgsmeldung
                 errorMsg = null
                 successMsg = null
+                // setze Flag, dass Änderung läuft, um Spinner anzuzeigen
                 isChanging = true
+
+                // Aufruf des ViewModels, um Username bei Firebase zu ändern
                 loginVM.changeUsername(newUsername) { success, err ->
-                    isChanging = false
+                    isChanging = false                            // zurücksetzen des Flags
                     if (success) {
                         successMsg = "Username updated"
                         Toast
@@ -144,13 +167,14 @@ fun SettingsScreen(
                     }
                 }
             },
-            enabled = !isChanging,
+            enabled = !isChanging,                               // deaktivieren, während Änderung läuft
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
+            // Zeigt Spinner, solange die Änderung ausgeführt wird
             if (isChanging) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
@@ -166,11 +190,11 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 4) Logout
+        // 4) Logout: Meldet den User aus und ruft onLogout() auf (Navigation zum Login/Choice-Screen)
         Button(
             onClick = {
-                loginVM.logout()
-                onLogout()
+                loginVM.logout()                                   // führt FirebaseAuth.signOut() aus
+                onLogout()                                         // navigiert zurück zum Auth-Screen
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.secondary,
