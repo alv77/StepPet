@@ -83,7 +83,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose.android)
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
-
     // ----------------------------
     // Room (lokale Datenbank)
     // ----------------------------
@@ -112,6 +111,11 @@ dependencies {
     // implementation("com.google.firebase:firebase-messaging-ktx")
 
     // ----------------------------
+    // AdMob (Google Mobile Ads SDK)
+    // ----------------------------
+    implementation("com.google.android.gms:play-services-ads:22.1.0")
+
+    // ----------------------------
     // Testing
     // ----------------------------
     testImplementation(libs.junit)
@@ -122,5 +126,3 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
-
-

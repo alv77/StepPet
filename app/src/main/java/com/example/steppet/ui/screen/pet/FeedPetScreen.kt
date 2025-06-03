@@ -1,7 +1,9 @@
 package com.example.steppet.ui.screen.pet
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
@@ -26,7 +28,13 @@ import com.example.steppet.R
 import com.example.steppet.data.local.PetEntity
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.viewmodel.PetViewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.rewarded.RewardItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -35,20 +43,16 @@ import java.time.LocalDate
 @Composable
 fun FeedPetScreen(
     navController: NavController,
-    // PetViewModel wird hier via AndroidViewModelFactory instanziiert, um den Application-Context zu liefern
     petViewModel: PetViewModel = viewModel(
         factory = AndroidViewModelFactory(LocalContext.current.applicationContext as Application)
     )
 ) {
-    // Scaffold stellt das Grundlayout mit TopBar und Content-Bereich bereit
     Scaffold(
         topBar = {
-            // TopBar enthält den Titel und eine Settings-Schaltfläche, die zur Settings-Screen navigiert
             TopBar { navController.navigate("settings") }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { contentPadding ->
-        // FeedPetScreenContent ist der eigentliche Bildschirminhalt, mit Padding vom Scaffold berücksichtigt
         FeedPetScreenContent(
             navController = navController,
             petViewModel = petViewModel,
@@ -63,34 +67,69 @@ private fun FeedPetScreenContent(
     petViewModel: PetViewModel,
     modifier: Modifier = Modifier
 ) {
-    // Abonniere den aktuellen Pet-Zustand als State, initial mit Default-PetEntity
     val pet by petViewModel.pet.collectAsState(initial = PetEntity())
-    // Abonniere die heutigen Schritte über StepTrackerManager
     val steps by StepTrackerManager.stepsToday.collectAsState(initial = 0)
     val context = LocalContext.current
 
-    // SharedPreferences für „Rewards“ (belohntes Jubiläum, wenn 10.000 Schritte erreicht)
+    // SharedPreferences, um einmalige Belohnung pro Tag anzuzeigen
     val prefs = context.getSharedPreferences("rewards", Context.MODE_PRIVATE)
     val today = LocalDate.now().toString()
     val lastRewardDate = prefs.getString("lastRewardDate", null)
-    // State, ob die Konfetti-Animation angezeigt werden soll
     var showParticles by remember { mutableStateOf(false) }
 
-    // Bedingung, ob der User heute erstmals 10.000 Schritte erreicht hat
-    val showReward = steps >= 10_000 && lastRewardDate != today
-    LaunchedEffect(showReward) {
-        if (showReward) {
-            // Zeige eine Toast-Nachricht zur Belohnung
+    // ----------- RewardedAd-Logik -----------
+    var rewardedAd by remember { mutableStateOf<RewardedAd?>(null) }
+    var isAdLoaded by remember { mutableStateOf(false) }
+
+    val adUnitId = "ca-app-pub-3940256099942544/5224354917"
+
+    LaunchedEffect(Unit) {
+        // 1) Emulator als Testgerät registrieren
+        val config = RequestConfiguration.Builder()
+            .setTestDeviceIds(listOf(AdRequest.DEVICE_ID_EMULATOR))
+            .build()
+        MobileAds.setRequestConfiguration(config)
+
+        // 2) SDK initialisieren
+        MobileAds.initialize(context) {}
+
+        // 3) AdRequest nur bauen
+        val request = AdRequest.Builder().build()
+
+        // 4) RewardedAd laden
+        RewardedAd.load(
+            context,
+            adUnitId,
+            request,
+            object : RewardedAdLoadCallback() {
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    rewardedAd = null
+                    isAdLoaded = false
+                    Log.e("FeedPet", "RewardedAd failed to load (code=${error.code}): ${error.message}")
+                }
+
+                override fun onAdLoaded(ad: RewardedAd) {
+                    rewardedAd = ad
+                    isAdLoaded = true
+                    Log.d("FeedPet", "RewardedAd loaded successfully")
+                }
+            }
+        )
+    }
+
+    // ----------- Belohnungs-Toast einmalig pro Tag -----------
+    val showRewardMessage = steps >= 10_000 && lastRewardDate != today
+    LaunchedEffect(showRewardMessage) {
+        if (showRewardMessage) {
             Toast.makeText(
                 context,
                 "🎉 CONGRATULATIONS! You made your pet proud today!",
                 Toast.LENGTH_SHORT
             ).show()
             showParticles = true
-            // Speichere Datum, damit Belohnung nur einmal pro Tag angezeigt wird
             prefs.edit().putString("lastRewardDate", today).apply()
-            delay(2500)              // Warte 2,5 Sekunden, während die Konfetti-Animation läuft
-            showParticles = false    // Schalte Konfetti-Animation aus
+            delay(2500)
+            showParticles = false
         }
     }
 
@@ -104,7 +143,7 @@ private fun FeedPetScreenContent(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Kopfzeile mit Titel „Your Pet“ und einem Button, der zur Step-History navigiert
+            // ------- Kopfzeile (Titel + Step-History-Button) -------
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -122,16 +161,14 @@ private fun FeedPetScreenContent(
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ),
                 ) {
-                    // Anzeige der aktuellen Schritte in der Kopfzeile
                     Text("Steps: $steps", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
-            Spacer(Modifier.height(32.dp)) // Abstand
+            Spacer(Modifier.height(32.dp))
 
-            // Crossfade-Animation: wenn steps >= 10.000, zeige das belohnte Pet-Bild, sonst das Basis-Bild
+            // ------- Pet-Bild mit Crossfade (Belohnung ab 10k Schritte) -------
             Crossfade(targetState = steps >= 10_000, label = "PetImageCrossfade") { reward ->
-                // Wähle Bildressource: pet_reward.jpg oder pet_basic.png
                 val petImage = if (reward) R.drawable.pet_reward else R.drawable.pet_basic
                 androidx.compose.foundation.Image(
                     painter = painterResource(id = petImage),
@@ -142,18 +179,18 @@ private fun FeedPetScreenContent(
                 )
             }
 
-            Spacer(Modifier.height(32.dp)) // Abstand
+            Spacer(Modifier.height(32.dp))
 
-            // Zeige die drei Status-Balken für Hunger, Health und Happiness
+            // ------- Status-Balken: Hunger, Health, Happiness -------
             LabeledProgress("Hunger", pet.hungerLevel, MaterialTheme.colorScheme.tertiary)
             Spacer(Modifier.height(16.dp))
             LabeledProgress("Health", pet.health, MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
             LabeledProgress("Happiness", pet.happiness, MaterialTheme.colorScheme.secondary)
 
-            Spacer(Modifier.height(128.dp)) // größerer Abstand vor Button
+            Spacer(Modifier.height(32.dp))
 
-            // Wenn das Pet „tot“ ist (health == 0 oder happiness == 0), zeige traurige Nachricht
+            // ------- Feed-Button oder „Pet ist weg“-Nachricht -------
             if (pet.health == 0 || pet.happiness == 0) {
                 Text(
                     text = "Your pet is sad and has left… 😢",
@@ -161,7 +198,6 @@ private fun FeedPetScreenContent(
                     color = MaterialTheme.colorScheme.error
                 )
             } else {
-                // Ansonsten: Feed-Button aktivieren, wenn noch Feeds möglich sind
                 val canFeedNow = petViewModel.canFeed(steps)
                 val feedsLeft = petViewModel.remainingFeeds(steps)
 
@@ -183,56 +219,98 @@ private fun FeedPetScreenContent(
                         .height(48.dp)
                 ) {
                     if (canFeedNow) {
-                        // Zeige Anzahl verbleibender Feeds an, z.B. „Feed your pet (3 left)“
                         Text("Feed your pet ($feedsLeft left)")
                     } else {
-                        // Wenn keine Feeds mehr möglich sind, weise auf nächste Schwelle hin oder dass alle Feeds erledigt sind
                         val currentFeedCount = pet.feedsDoneToday
                         val todayStr = pet.lastFeedDate
-                        // VirtualFeedsDone = 0, falls heute noch kein Feed an diesem Datum war
-                        val virtualFeedsDone = if (todayStr != LocalDate.now().toString()) 0 else currentFeedCount
-                        val nextThreshold = (virtualFeedsDone + 1) * 1000 // Nächste 1.000 Schritte-Schwelle
+                        val virtualFeedsDone =
+                            if (todayStr != LocalDate.now().toString()) 0 else currentFeedCount
+                        val nextThreshold = (virtualFeedsDone + 1) * 1000
                         when {
-                            // Wenn aktuelle Schritte noch unter nächster Schwelle und unter 10.000
                             steps < nextThreshold && nextThreshold <= 10_000 -> {
                                 Text("Next feed unlocked at $nextThreshold steps")
                             }
-                            // Wenn schon 10 Feeds (10.000 Schritte/Feed) erreicht sind
                             (steps / 1000) >= 10 -> {
                                 Text("All feeds done for today")
                             }
                             else -> {
-                                // Fallback: benötigte Schritte anzeigen
                                 Text("Needs $nextThreshold steps")
                             }
                         }
                     }
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
+
+            // ------- Watch Ad for Reward Button -------
+            Button(
+                onClick = {
+                    rewardedAd?.let { ad ->
+                        ad.show(context as Activity) { rewardItem: RewardItem ->
+                            // Belohnung auslösen (z. B. Hunger um +10, Coins gutschreiben etc.)
+                            Toast.makeText(
+                                context,
+                                "User rewarded: ${rewardItem.amount} ${rewardItem.type}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        // Nach Abspielen: Ad zurücksetzen, neu laden
+                        rewardedAd = null
+                        isAdLoaded = false
+                        val nextReq = AdRequest.Builder().build()
+                        RewardedAd.load(
+                            context,
+                            adUnitId,
+                            nextReq,
+                            object : RewardedAdLoadCallback() {
+                                override fun onAdFailedToLoad(error: LoadAdError) {
+                                    rewardedAd = null
+                                    isAdLoaded = false
+                                }
+                                override fun onAdLoaded(ad: RewardedAd) {
+                                    rewardedAd = ad
+                                    isAdLoaded = true
+                                }
+                            }
+                        )
+                    } ?: run {
+                        // Sollte normal nicht passieren, da Button nur enabled= true, wenn isAdLoaded = true
+                        Toast.makeText(context, "Ad is not ready yet", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                enabled = isAdLoaded,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isAdLoaded)
+                        MaterialTheme.colorScheme.secondary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    contentColor = if (isAdLoaded)
+                        MaterialTheme.colorScheme.onSecondary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Watch Ad for Reward")
+            }
         }
 
-        // Wenn heute belohntes Jubiläum, zeige Konfetti-Overlay
+        // ------- Konfetti, wenn Belohnung ausgelöst wurde -------
         if (showParticles) {
             ConfettiOverlay()
         }
     }
 }
 
-/**
- * LabeledProgress zeigt einen Label-Text, einen LinearProgressIndicator und
- * den prozentualen Wert darunter.
- *
- * @param label       Beschriftung (z.B. "Hunger")
- * @param value       Wert zwischen 0 und 100
- * @param progressColor Farbe des gefüllten Teils des Balkens
- */
 @Composable
 private fun LabeledProgress(
     label: String,
     value: Int,
     progressColor: androidx.compose.ui.graphics.Color
 ) {
-    // Prozent-Wert 0f..1f, abgesichert gegen Werte außerhalb [0,100]
     val percent = (value / 100f).coerceIn(0f, 1f)
 
     Text(
@@ -258,8 +336,7 @@ private fun LabeledProgress(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopBar(onSettingsClick: () -> Unit) {
-    // Aktuellen User aus FirebaseAuth abrufen, um ggf. displayName oder E-Mail anzuzeigen
-    val user = FirebaseAuth.getInstance().currentUser
+    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
     val displayName = user?.displayName
     val email = user?.email
 
@@ -275,33 +352,26 @@ private fun TopBar(onSettingsClick: () -> Unit) {
             )
         },
         actions = {
-            // Icon-Button für Settings, ruft onSettingsClick() auf
             IconButton(onClick = onSettingsClick) {
                 Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,     // Hintergrund des AppBar
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer, // Textfarbe des Titels
-            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer // Farbe des Icons
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     )
 }
 
-/**
- * ConfettiOverlay zeichnet kleine bunte Kreise, die von oben nach unten fallen,
- * um eine Konfetti-Animation zu simulieren.
- */
 @Composable
 fun ConfettiOverlay() {
-    // Drei mögliche Farbtöne aus dem Theme
     val colors = listOf(
         MaterialTheme.colorScheme.primary,
         MaterialTheme.colorScheme.tertiary,
         MaterialTheme.colorScheme.secondary
     )
 
-    // Erzeuge 30 Partikel mit zufälligen Startpositionen (x, y)
     val particles = remember {
         List(30) {
             mutableStateOf(
@@ -313,10 +383,8 @@ fun ConfettiOverlay() {
         }
     }
 
-    // Für jedes Partikel wird eine Animatable für die y-Position erstellt
     val yOffsets = remember { List(30) { Animatable(particles[it].value.y) } }
 
-    // Starte bei Kompositionsstart alle Animationen parallel
     LaunchedEffect(Unit) {
         yOffsets.forEachIndexed { index, anim ->
             launch {
@@ -329,7 +397,6 @@ fun ConfettiOverlay() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Zeichne jedes Partikel als kleinen kreisförmigen Box
         yOffsets.forEachIndexed { index, anim ->
             Box(
                 modifier = Modifier
