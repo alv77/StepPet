@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,12 @@ fun SettingsScreen(
 ) {
     // Context für Toast-Meldungen
     val context = LocalContext.current
+
+    val soundPrefs = context.getSharedPreferences("step_prefs", 0)
+    var isSoundEnabled by remember {
+        mutableStateOf(soundPrefs.getBoolean("sound_enabled", true))
+    }
+
 
     // State-Variablen für das Change-Username-Formular
     var newUsername by remember { mutableStateOf("") }            // Eingabe für neuen Nutzernamen
@@ -90,6 +97,33 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Enable Feed Sound",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Switch(
+                checked = isSoundEnabled,
+                onCheckedChange = {
+                    isSoundEnabled = it
+                    soundPrefs.edit().putBoolean("sound_enabled", it).apply()
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary, // White or visible on blue
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
+
 
 
         // 1) Back-Button: Navigiert zurück zur vorherigen Ansicht

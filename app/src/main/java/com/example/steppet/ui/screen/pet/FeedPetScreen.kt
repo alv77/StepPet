@@ -38,6 +38,8 @@ import com.google.android.gms.ads.rewarded.RewardItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.example.steppet.util.SoundUtils
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,7 +204,10 @@ private fun FeedPetScreenContent(
                 val feedsLeft = petViewModel.remainingFeeds(steps)
 
                 Button(
-                    onClick = { petViewModel.feedPet(steps) },
+                    onClick = {
+                        petViewModel.feedPet(steps)
+                        SoundUtils.playSound(context, R.raw.feed_sound)
+                    },
                     enabled = canFeedNow,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (canFeedNow)
