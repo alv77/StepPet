@@ -8,7 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.viewmodel.LoginViewModel
+import io.grpc.Context
 
 /**
  * SettingsScreen zeigt diverse Einstellungen an:
@@ -39,6 +41,14 @@ fun SettingsScreen(
     var errorMsg by remember { mutableStateOf<String?>(null) }     // Fehlermeldung, falls Username leer oder update fehlgeschlagen
     var successMsg by remember { mutableStateOf<String?>(null) }   // Erfolgsmeldung nach erfolgreichem Change
 
+    var sensitivityLevel by remember {
+        mutableStateOf(
+            StepTrackerManager.SensitivityLevel.fromOrdinalSafe(
+                context.getSharedPreferences("step_prefs", 0)
+                .getInt("sensitivity_level", StepTrackerManager.SensitivityLevel.STANDARD.ordinal)
+        ))
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -52,6 +62,35 @@ fun SettingsScreen(
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
+
+        Text(
+            text = "Step Sensitivity",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Slider(
+            value = sensitivityLevel.ordinal.toFloat(),
+            onValueChange = {
+                val level = StepTrackerManager.SensitivityLevel.fromOrdinalSafe(it.toInt())
+                sensitivityLevel = level
+                StepTrackerManager.setSensitivity(level)
+            },
+            valueRange = 0f..2f,
+            steps = 1,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            text = when (sensitivityLevel) {
+                StepTrackerManager.SensitivityLevel.LOW -> "Low – More accurate, less sensitive"
+                StepTrackerManager.SensitivityLevel.STANDARD -> "Standard – Balanced"
+                StepTrackerManager.SensitivityLevel.HIGH -> "High – More steps, may overcount"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
 
         // 1) Back-Button: Navigiert zurück zur vorherigen Ansicht
         Button(

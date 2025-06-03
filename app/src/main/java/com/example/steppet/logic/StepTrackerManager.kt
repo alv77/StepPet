@@ -30,9 +30,38 @@ object StepTrackerManager : SensorEventListener {
     private val _stepsToday = MutableStateFlow(0)
     val stepsToday = _stepsToday.asStateFlow()
 
-    private val stepThreshold = 11.5f
-    private val stepIntervalMs = 350L
+    private var stepThreshold = 11.5f
+    private var stepIntervalMs = 350L
     private var lastStepTime = 0L
+
+    enum class SensitivityLevel(val threshold: Float, val intervalMs: Long) {
+        LOW(13.0f, 600L),
+        STANDARD(11.5f, 350L),
+        HIGH(10.0f, 300L);
+
+        companion object {
+            fun fromOrdinalSafe(ordinal: Int): SensitivityLevel {
+                return values().getOrElse(ordinal) { STANDARD }
+            }
+        }
+    }
+
+    private const val PREF_SENSITIVITY = "sensitivity_level"
+
+    private fun saveSensitivity(level: SensitivityLevel) {
+        getPrefs().edit().putInt(PREF_SENSITIVITY, level.ordinal).apply()
+    }
+
+    private fun loadSensitivity(): SensitivityLevel {
+        val ordinal = getPrefs().getInt(PREF_SENSITIVITY, SensitivityLevel.STANDARD.ordinal)
+        return SensitivityLevel.fromOrdinalSafe(ordinal)
+    }
+
+    fun setSensitivity(level: SensitivityLevel) {
+        stepThreshold = level.threshold
+        stepIntervalMs = level.intervalMs
+        saveSensitivity(level)
+    }
 
     private var totalAndroidStepsRaw = 0
     private const val PREFS_NAME = "step_prefs"
@@ -61,7 +90,8 @@ object StepTrackerManager : SensorEventListener {
             }
         }
 
-        // Fetch Android step count and handle baseline logic
+        setSensitivity(loadSensitivity())
+
         loadAndroidStepCount()
     }
 
