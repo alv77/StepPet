@@ -6,6 +6,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.steppet.logic.StepTrackerManager
@@ -17,25 +18,27 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 /**
- * Application‐Klasse, in der WorkManager‐Aufträge geplant werden.
+ * Application-Klasse, in der WorkManager-Aufträge geplant werden.
  *
- * • PetDecayWorker: alle 30 Minuten ausführen → Hunger linear über 24 h reduzieren.
- * • DailyStepSummaryWorker: täglich um 23:00 Uhr Zusammenfassung pushen.
+ * • PetDecayWorker: alle 30 Minuten ausführen → Hunger linear über 24 h reduzieren,
+ *   außerdem Notification, wenn Hunger von ≥20% auf <20% fällt.
+ * • DailyStepSummaryWorker: täglich um 22:15 Uhr eine Zusammenfassung pushen.
  *
- * Außerdem starten wir StepTrackerManager bei App‐Start und synchronisieren beim Stoppen.
+ * Zusätzlich enqueuen wir jeweils einen One-Time-WorkRequest, damit sowohl
+ * die Hunger-Notification als auch die Step-Summary-Notification sofort
+ * nach App-Start angezeigt werden (Demo-Zwecke).
  */
 class StepPetApp : Application(), DefaultLifecycleObserver {
 
     override fun onCreate() {
-        Log.d("StepPetApp", "Application onCreate – registering workers")
         super<Application>.onCreate()
+        Log.d("StepPetApp", "Application onCreate – registering workers")
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
 
-        // PetDecayWorker: alle 30 Minuten ausführen
+        // 1) PetDecayWorker: alle 30 Minuten ausführen
         val decayRequest = PeriodicWorkRequestBuilder<PetDecayWorker>(
             30, TimeUnit.MINUTES
         ).build()
-
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(
                 "pet_decay_work",
@@ -43,8 +46,14 @@ class StepPetApp : Application(), DefaultLifecycleObserver {
                 decayRequest
             )
 
-        // DailyStepSummaryWorker: täglich um 23:00 Uhr eine Zusammenfassung senden
+        // 2) DailyStepSummaryWorker: täglich um 22:15 Uhr ausführen
         scheduleDailyStepSummary()
+
+        // 3) Sofortige Einmal-Ausführung beider Worker, damit Notifications direkt kommen
+        WorkManager.getInstance(this)
+            .enqueue(OneTimeWorkRequestBuilder<PetDecayWorker>().build())
+        WorkManager.getInstance(this)
+            .enqueue(OneTimeWorkRequestBuilder<DailyStepSummaryWorker>().build())
     }
 
     override fun onStart(owner: LifecycleOwner) {
@@ -59,15 +68,24 @@ class StepPetApp : Application(), DefaultLifecycleObserver {
     }
 
     /**
-     * Plant DailyStepSummaryWorker so, dass er jeden Tag um 23:00 Uhr läuft.
+     * Plant DailyStepSummaryWorker so, dass er jeden Tag um 22:15 Uhr läuft.
      */
     private fun scheduleDailyStepSummary() {
         val now = LocalDateTime.now(ZoneId.systemDefault())
-        val todayAt23 = now.withHour(23).withMinute(0).withSecond(0).withNano(0)
-        val firstRun = if (now.isAfter(todayAt23)) {
-            todayAt23.plusDays(1)
+
+        // Tageszeit 22:15 festlegen
+        val todayAt2215 = now
+            .withHour(22)
+            .withMinute(15)
+            .withSecond(0)
+            .withNano(0)
+
+        val firstRun = if (now.isAfter(todayAt2215)) {
+            // Ist es bereits nach 22:15? → plane auf morgen 22:15
+            todayAt2215.plusDays(1)
         } else {
-            todayAt23
+            // Sonst heute um 22:15
+            todayAt2215
         }
         val delayMillis = Duration.between(now, firstRun).toMillis()
 

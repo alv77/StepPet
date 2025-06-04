@@ -3,8 +3,12 @@ package com.example.steppet.worker
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -15,6 +19,14 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/**
+ * DailyStepSummaryWorker läuft einmal pro Tag (geplant über WorkManager).
+ * Bei doWork() wird:
+ * 1) Schrittzahl für heute aus Firestore geholt.
+ * 2) Sofort Notification „Du bist heute X Schritte gegangen“ angezeigt.
+ * 3) Baseline-Schritte vom Sensor (STEP_COUNTER) in SharedPreferences gespeichert,
+ *    damit StepTrackerManager am nächsten Morgen korrekt zählt.
+ */
 class DailyStepSummaryWorker(
     context: Context,
     params: WorkerParameters
@@ -30,8 +42,12 @@ class DailyStepSummaryWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val user = auth.currentUser
-        if (user == null) return@withContext Result.success()
+        if (user == null) {
+            // Kein eingeloggter User → nichts tun
+            return@withContext Result.success()
+        }
 
+        // 1) Heutige Schrittzahl aus Cloud holen
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
         val count = try {
             CloudRepository.getStepsFromCloud(user.uid, today) ?: 0
@@ -39,16 +55,17 @@ class DailyStepSummaryWorker(
             0
         }
 
+        // 2) Notification anzeigen
         showStepSummaryNotification(count)
+        Log.d("DailyStepSummary", "Notification gesendet: Schritte heute = $count")
 
+        // 3) Sensor-Baseline für STEP_COUNTER setzen
         val sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        val stepCounter = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_STEP_COUNTER)
-
+        val stepCounter = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         if (stepCounter != null) {
-            val listener = object : android.hardware.SensorEventListener {
-                override fun onSensorChanged(event: android.hardware.SensorEvent?) {
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent?) {
                     sensorManager.unregisterListener(this)
-
                     val totalRaw = event?.values?.get(0)?.toInt() ?: return
 
                     val prefs = applicationContext.getSharedPreferences("step_prefs", Context.MODE_PRIVATE)
@@ -58,10 +75,13 @@ class DailyStepSummaryWorker(
                         .apply()
                 }
 
-                override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
             }
-
-            sensorManager.registerListener(listener, stepCounter, android.hardware.SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(
+                listener,
+                stepCounter,
+                SensorManager.SENSOR_DELAY_NORMAL
+            )
         }
 
         Result.success()
@@ -71,6 +91,7 @@ class DailyStepSummaryWorker(
         val notificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // NotificationChannel anlegen (einmalig, hier idempotent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,

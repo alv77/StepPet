@@ -34,21 +34,21 @@ class MainActivity : ComponentActivity() {
 
         val petRepo = PetRepository(this)
 
+        // ✅ Sync pet and step data OUTSIDE setContent
+        if (auth.currentUser != null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                petRepo.syncPetFromCloud()
+            }
+            StepTrackerManager.loadStepsFromCloud {
+                StepTrackerManager.onStepsLoaded(it)
+            }
+        }
+
         setContent {
             StepPetTheme {
                 val loginVM: LoginViewModel = viewModel()
                 val stepsVM: StepTrackerViewModel = viewModel()
                 val navController = rememberNavController()
-
-                // Sync data once user is authenticated
-                if (auth.currentUser != null) {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        petRepo.syncPetFromCloud()
-                    }
-                    StepTrackerManager.loadStepsFromCloud {
-                        StepTrackerManager.onStepsLoaded(it)
-                    }
-                }
 
                 AppNavGraph(
                     navController = navController,
