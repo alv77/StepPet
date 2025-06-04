@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.steppet.data.cloud.CloudRepository
 import com.example.steppet.data.local.AppDatabase
+import com.example.steppet.data.repository.PetRepository
 import com.example.steppet.logic.StepTrackerManager
 import com.example.steppet.ui.screen.auth.AuthChoiceScreen
 import com.example.steppet.ui.screen.auth.LoginScreen
@@ -75,10 +76,18 @@ fun AppNavGraph(
                     context.getSharedPreferences("rewards", Context.MODE_PRIVATE)
                         .edit().clear().apply()
 
-                    // d) Erst jetzt zu Home navigieren
+                    // d) Erst jetzt zu Home navigieren – aber zuerst Cloud sync
+                    val petRepo = PetRepository(context)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        petRepo.syncPetFromCloud()
+                        StepTrackerManager.loadStepsFromCloud {
+                            StepTrackerManager.onStepsLoaded(it)
+                        }
+                    }
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Choice.route) { inclusive = true }
                     }
+
                 }
             )
         }
@@ -106,9 +115,17 @@ fun AppNavGraph(
                         .edit().clear().apply()
 
                     // d) Erst jetzt zu Home navigieren
+                    val petRepo = PetRepository(context)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        petRepo.syncPetFromCloud()
+                        StepTrackerManager.loadStepsFromCloud {
+                            StepTrackerManager.onStepsLoaded(it)
+                        }
+                    }
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Choice.route) { inclusive = true }
                     }
+
                 }
             )
         }
